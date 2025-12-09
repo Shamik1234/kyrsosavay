@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация - Colab Hub{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white text-center py-3">
+                <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Регистрация</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('register') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.username.label(class="form-label") }}
+                            {{ form.username(class="form-control", placeholder="Придумайте логин") }}
+                            {% if form.username.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.username.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control", placeholder="example@email.com") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control", placeholder="Не менее 6 символов") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control", placeholder="Иванов Иван Иванович") }}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.university.label(class="form-label") }}
+                            {{ form.university(class="form-control", placeholder="Название вашего ВУЗа") }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.faculty.label(class="form-label") }}
+                            {{ form.faculty(class="form-control", placeholder="Ваш факультет") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.course.label(class="form-label") }}
+                            {{ form.course(class="form-select") }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.skills.label(class="form-label") }}
+                            {{ form.skills(class="form-control", placeholder="Python, HTML, Design...") }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid mb-3">
+                        {{ form.submit(class="btn btn-success btn-lg") }}
+                    </div>
+                    
+                    <div class="text-center">
+                        <p class="mb-0">
+                            Уже есть аккаунт? 
+                            <a href="{{ url_for('login') }}" class="text-decoration-none">
+                                Войдите
+                            </a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

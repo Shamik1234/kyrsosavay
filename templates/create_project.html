@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Создать проект - Colab Hub{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Создание нового проекта</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_project') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control", placeholder="Название вашего проекта") }}
+                        {% if form.title.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.title.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows=5, placeholder="Подробное описание проекта: цели, задачи, идея...") }}
+                        <div class="form-text">Опишите проект так, чтобы другие студенты захотели к вам присоединиться</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.difficulty.label(class="form-label") }}
+                            {{ form.difficulty(class="form-select") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.location_type.label(class="form-label") }}
+                            {{ form.location_type(class="form-select") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.estimated_duration.label(class="form-label") }}
+                            {{ form.estimated_duration(class="form-control", placeholder="Например: 3 месяца") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.needed_roles.label(class="form-label") }}
+                        {{ form.needed_roles(class="form-control", rows=3, placeholder="Например:
+backend:middle
+frontend:junior
+designer:any
+Каждая роль с новой строки в формате 'роль:уровень'") }}
+                        <div class="form-text">Уровни: beginner (начинающий), middle (средний), advanced (продвинутый), any (любой)</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.university_filter.label(class="form-label") }}
+                            {{ form.university_filter(class="form-control", placeholder="Оставьте пустым для всех ВУЗов") }}
+                            <div class="form-text">Если хотите видеть заявки только из своего ВУЗа</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.faculty_filter.label(class="form-label") }}
+                            {{ form.faculty_filter(class="form-control", placeholder="Например: Факультет информатики") }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Советы по созданию проекта</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Четко сформулируйте цели и задачи проекта</li>
+                    <li>Укажите конкретные роли и уровень требуемых специалистов</li>
+                    <li>Опишите, что получит участник от работы в проекте</li>
+                    <li>Укажите реальные сроки и формат работы</li>
+                    <li>Будьте открыты для студентов из других ВУЗов</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

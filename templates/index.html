@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section text-center py-5 mb-5 bg-primary text-white rounded">
+    <div class="container py-5">
+        <h1 class="display-4 fw-bold mb-4">Найди команду для своего проекта</h1>
+        <p class="lead mb-4">Платформа для студенческой коллаборации между вузами России</p>
+        <a href="{{ url_for('create_project') }}" class="btn btn-light btn-lg me-3">
+            <i class="fas fa-plus-circle"></i> Создать проект
+        </a>
+        <a href="{{ url_for('projects') }}" class="btn btn-outline-light btn-lg">
+            <i class="fas fa-search"></i> Найти проект
+        </a>
+    </div>
+</div>
+
+<div class="row mb-5 text-center">
+    <div class="col-md-4 mb-3">
+        <div class="p-4 border rounded bg-light">
+            <h2 class="text-primary display-6">{{ stats.projects }}</h2>
+            <p class="mb-0 fw-bold">Активных проектов</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="p-4 border rounded bg-light">
+            <h2 class="text-primary display-6">{{ stats.users }}</h2>
+            <p class="mb-0 fw-bold">Студентов в системе</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="p-4 border rounded bg-light">
+            <h2 class="text-primary display-6">{{ stats.universities }}</h2>
+            <p class="mb-0 fw-bold">ВУЗов участвует</p>
+        </div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h2 class="mb-4">Последние проекты</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for project in projects %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.title }}</h5>
+                    <p class="card-text text-muted small">
+                        <i class="fas fa-university me-1"></i>
+                        {{ project.university_filter or 'Все ВУЗы' }}
+                    </p>
+                    <p class="card-text">{{ project.description[:120] }}...</p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-info me-1">{{ project.difficulty }}</span>
+                        <span class="badge bg-secondary me-1">{{ project.category }}</span>
+                        {% if project.location_type == 'online' %}
+                        <span class="badge bg-success">Онлайн</span>
+                        {% elif project.location_type == 'offline' %}
+                        <span class="badge bg-secondary">Очно</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Гибрид</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}" 
+                       class="btn btn-sm btn-primary">
+                        Подробнее
+                    </a>
+                    <small class="text-muted float-end mt-1">
+                        {{ project.created_at.strftime('%d.%m.%Y') }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="text-center mt-5">
+    <a href="{{ url_for('projects') }}" class="btn btn-outline-primary btn-lg">
+        Посмотреть все проекты <i class="fas fa-arrow-right ms-2"></i>
+    </a>
+</div>
+{% endblock %}
