@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: colab-hub
+    env: python
+    pythonVersion: "3.11.0"  # Ключевая строка
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
