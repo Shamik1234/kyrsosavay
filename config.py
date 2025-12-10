@@ -1,10 +1,19 @@
 import os
-from dotenv import load_dotenv
+from urllib.parse import urlparse
 
-load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-fallback-key')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///colab_hub.db')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-change-me')
+
+    # Для Render PostgreSQL
+    if os.environ.get('DATABASE_URL'):
+        DATABASE_URL = os.environ['DATABASE_URL']
+        # Render использует postgres://, меняем на postgresql://
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///colab_hub.db'
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+    DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
