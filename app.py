@@ -349,35 +349,7 @@ def create_app():
 
             db.session.commit()
 
-    # ---------- СОЗДАНИЕ ПРОЕКТА ----------
 
-    @app.route('/create_project', methods=['GET', 'POST'])
-    @login_required
-    def create_project():
-        from forms import ProjectForm  # Импортируем тут
-
-        form = ProjectForm()
-        if form.validate_on_submit():
-            project = Project(
-                title=form.title.data,
-                description=form.description.data,
-                category=form.category.data,
-                needed_roles=form.needed_roles.data,
-                difficulty=form.difficulty.data,
-                location_type=form.location_type.data,
-                university_filter=form.university_filter.data or current_user.university,
-                faculty_filter=form.faculty_filter.data,
-                estimated_duration=form.estimated_duration.data,
-                creator_id=current_user.id
-            )
-
-            db.session.add(project)
-            db.session.commit()
-
-            flash('Проект успешно создан!', 'success')
-            return redirect(url_for('project_detail', project_id=project.id))
-
-        return render_template('create_project.html', form=form)
     return app
 
 
