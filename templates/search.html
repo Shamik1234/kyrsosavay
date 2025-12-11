@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск проектов - Colab Hub{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Поиск проектов</h1>
+    
+    <!-- Форма поиска -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('search_projects') }}" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" 
+                           class="form-control" 
+                           name="q" 
+                           placeholder="Поиск по названию или описанию..."
+                           value="{{ search_query or '' }}">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="category">
+                        <option value="all" {% if not selected_category %}selected{% endif %}>Все категории</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>
+                            {{ cat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="university">
+                        <option value="all" {% if not selected_university %}selected{% endif %}>Все ВУЗы</option>
+                        {% for uni in universities %}
+                        <option value="{{ uni }}" {% if selected_university == uni %}selected{% endif %}>
+                            {{ uni or 'Все ВУЗы' }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="difficulty">
+                        <option value="all" {% if not selected_difficulty %}selected{% endif %}>Любая сложность</option>
+                        <option value="beginner" {% if selected_difficulty == 'beginner' %}selected{% endif %}>Для начинающих</option>
+                        <option value="intermediate" {% if selected_difficulty == 'intermediate' %}selected{% endif %}>Средний уровень</option>
+                        <option value="advanced" {% if selected_difficulty == 'advanced' %}selected{% endif %}>Продвинутый</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Найти проекты
+                    </button>
+                    <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Сбросить фильтры
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Результаты поиска -->
+    {% if projects %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for project in projects %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.title }}</h5>
+                    <p class="card-text text-muted small">
+                        <i class="fas fa-university me-1"></i>
+                        {{ project.university_filter or 'Все ВУЗы' }}
+                    </p>
+                    <p class="card-text">{{ project.description[:100] }}...</p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-info me-1">
+                            {{ 'Начинающий' if project.difficulty == 'beginner' else 'Средний' if project.difficulty == 'intermediate' else 'Продвинутый' }}
+                        </span>
+                        <span class="badge bg-secondary me-1">{{ project.category }}</span>
+                        {% if project.location_type == 'online' %}
+                        <span class="badge bg-success">Онлайн</span>
+                        {% elif project.location_type == 'offline' %}
+                        <span class="badge bg-secondary">Очно</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Гибрид</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if project.needed_roles %}
+                    <p class="small text-muted mb-2">
+                        <strong>Нужны:</strong>
+                        {% set roles = project.needed_roles.split('\n') %}
+                        {% for role_line in roles[:2] %}
+                            {% if ':' in role_line %}
+                                {{ role_line.split(':')[0] }}{% if not loop.last %}, {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if roles|length > 2 %}...{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('project_detail', project_id=project.id) }}" 
+                           class="btn btn-sm btn-primary">
+                            Подробнее
+                        </a>
+                        <small class="text-muted">
+                            {{ project.created_at.strftime('%d.%m.%Y') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+        <h4>Проекты не найдены</h4>
+        <p class="text-muted">Попробуйте изменить параметры поиска</p>
+        <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+            <i class="fas fa-plus-circle"></i> Создать первый проект
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

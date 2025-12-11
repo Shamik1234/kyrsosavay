@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование профиля - Colab Hub{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-user-edit me-2"></i>Редактирование профиля</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_profile') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control") }}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.university.label(class="form-label") }}
+                            {{ form.university(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.faculty.label(class="form-label") }}
+                            {{ form.faculty(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.course.label(class="form-label") }}
+                            {{ form.course(class="form-select") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.skills.label(class="form-label") }}
+                            {{ form.skills(class="form-control", placeholder="Python, Flask, HTML, CSS...") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.bio.label(class="form-label") }}
+                        {{ form.bio(class="form-control", rows=4, placeholder="Расскажите о себе, своих интересах и целях...") }}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary me-md-2">
+                            Отмена
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

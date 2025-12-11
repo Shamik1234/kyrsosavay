@@ -126,9 +126,16 @@ def profile():
 
 @app.route('/projects')
 def projects():
-    projects_list = Project.query.filter_by(status='active').order_by(Project.created_at.desc()).all()
-    return render_template('projects.html', projects=projects_list, current_user=current_user)
+    page = request.args.get('page', 1, type=int)
+    per_page = 9  # Проектов на странице
 
+    projects_list = Project.query.filter_by(status='active') \
+        .order_by(Project.created_at.desc()) \
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template('projects.html',
+                           projects=projects_list,
+                           current_user=current_user)
 
 @app.route('/project/<int:project_id>')
 def project_detail(project_id):
@@ -344,6 +351,83 @@ def handle_application(app_id, action):
     return redirect(url_for('project_applications', project_id=project.id))
 
 
+# ---------- ПОИСК И ФИЛЬТРАЦИЯ ----------
+
+@app.route('/search')
+def search_projects():
+    query = request.args.get('q', '')
+    category = request.args.get('category', '')
+    university = request.args.get('university', '')
+    difficulty = request.args.get('difficulty', '')
+
+    # Базовый запрос
+    projects_query = Project.query.filter_by(status='active')
+
+    # Применяем фильтры
+    if query:
+        projects_query = projects_query.filter(
+            (Project.title.ilike(f'%{query}%')) |
+            (Project.description.ilike(f'%{query}%'))
+        )
+
+    if category and category != 'all':
+        projects_query = projects_query.filter_by(category=category)
+
+    if university and university != 'all':
+        projects_query = projects_query.filter_by(university_filter=university)
+
+    if difficulty and difficulty != 'all':
+        projects_query = projects_query.filter_by(difficulty=difficulty)
+
+    projects = projects_query.order_by(Project.created_at.desc()).all()
+
+    # Получаем уникальные значения для фильтров
+    categories = db.session.query(Project.category).distinct().all()
+    universities = db.session.query(Project.university_filter).distinct().all()
+    difficulties = ['beginner', 'intermediate', 'advanced']
+
+    return render_template('search.html',
+                           projects=projects,
+                           search_query=query,
+                           categories=[c[0] for c in categories if c[0]],
+                           universities=[u[0] for u in universities if u[0]],
+                           difficulties=difficulties,
+                           selected_category=category,
+                           selected_university=university,
+                           selected_difficulty=difficulty,
+                           current_user=current_user)
+
+
+@app.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    from forms import EditProfileForm
+
+    form = EditProfileForm()
+
+    if form.validate_on_submit():
+        current_user.full_name = form.full_name.data
+        current_user.university = form.university.data
+        current_user.faculty = form.faculty.data
+        current_user.course = int(form.course.data)
+        current_user.skills = form.skills.data
+        current_user.bio = form.bio.data
+
+        db.session.commit()
+        flash('Профиль успешно обновлен!', 'success')
+        return redirect(url_for('profile'))
+
+    # Заполняем форму текущими данными
+    if request.method == 'GET':
+        form.full_name.data = current_user.full_name
+        form.university.data = current_user.university
+        form.faculty.data = current_user.faculty
+        form.course.data = str(current_user.course)
+        form.skills.data = current_user.skills
+        form.bio.data = current_user.bio
+
+    return render_template('edit_profile.html', form=form)
+
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 
 with app.app_context():
@@ -379,6 +463,16 @@ with app.app_context():
         db.session.add(test_project)
 
         db.session.commit()
+
+# В конец app.py перед if __name__ == '__main__' добавьте:
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

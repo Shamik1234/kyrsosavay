@@ -3,147 +3,323 @@
 {% block title %}Мой профиль - Colab Hub{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-4 mb-4">
-        <!-- Информация о пользователе -->
-        <div class="card">
-            <div class="card-body text-center">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                     style="width: 100px; height: 100px; font-size: 3rem;">
-                    {{ current_user.username[0]|upper }}
-                </div>
-                
-                <h4>{{ current_user.full_name or current_user.username }}</h4>
-                <p class="text-muted">@{{ current_user.username }}</p>
-                
-                <div class="text-start">
-                    <p><i class="fas fa-envelope me-2"></i>{{ current_user.email }}</p>
-                    <p><i class="fas fa-university me-2"></i>{{ current_user.university }}</p>
-                    <p><i class="fas fa-graduation-cap me-2"></i>{{ current_user.faculty }}, {{ current_user.course }} курс</p>
-                    {% if current_user.skills %}
-                    <p><i class="fas fa-code me-2"></i>{{ current_user.skills }}</p>
-                    {% endif %}
-                </div>
-                
-                <a href="#" class="btn btn-outline-primary w-100">
-                    <i class="fas fa-edit"></i> Редактировать профиль
-                </a>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-8">
-        <!-- Мои проекты -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Мои проекты</h5>
-            </div>
-            <div class="card-body">
-                {% if user_projects %}
-                <div class="list-group">
-                    {% for project in user_projects %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">{{ project.title }}</h6>
-                                <small class="text-muted">
-                                    Создан: {{ project.created_at.strftime('%d.%m.%Y') }}
-                                </small>
+<div class="container">
+    <div class="row">
+        <!-- Левая колонка - информация о пользователе -->
+        <div class="col-md-4 mb-4">
+            <!-- Карточка профиля -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <!-- Аватар пользователя -->
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+                         style="width: 100px; height: 100px; font-size: 3rem;">
+                        {{ current_user.username[0]|upper }}
+                    </div>
+
+                    <!-- Имя пользователя -->
+                    <h4>{{ current_user.full_name or current_user.username }}</h4>
+                    <p class="text-muted mb-3">@{{ current_user.username }}</p>
+
+                    <!-- Основная информация -->
+                    <div class="text-start mb-4">
+                        <p class="mb-2">
+                            <i class="fas fa-envelope text-primary me-2"></i>
+                            {{ current_user.email }}
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-university text-primary me-2"></i>
+                            {{ current_user.university or 'Не указано' }}
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-graduation-cap text-primary me-2"></i>
+                            {{ current_user.faculty or 'Не указано' }}, {{ current_user.course }} курс
+                        </p>
+                        {% if current_user.skills %}
+                        <p class="mb-2">
+                            <i class="fas fa-code text-primary me-2"></i>
+                            {{ current_user.skills }}
+                        </p>
+                        {% endif %}
+                        <p class="mb-0">
+                            <i class="fas fa-calendar text-primary me-2"></i>
+                            Зарегистрирован: {{ current_user.created_at.strftime('%d.%m.%Y') }}
+                        </p>
+                    </div>
+
+                    <!-- Кнопка редактирования -->
+                    <a href="{{ url_for('edit_profile') }}" class="btn btn-primary w-100 mb-3">
+                        <i class="fas fa-edit me-1"></i> Редактировать профиль
+                    </a>
+
+                    <!-- Статистика -->
+                    <div class="border-top pt-3">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h5 class="mb-1">{{ user_projects|length }}</h5>
+                                <small class="text-muted">Проектов</small>
                             </div>
-                            <div class="btn-group">
-                                <a href="{{ url_for('project_detail', project_id=project.id) }}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('edit_project', project_id=project.id) }}" 
-                                   class="btn btn-sm btn-outline-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
+                            <div class="col-6">
+                                <h5 class="mb-1">{{ applications|length }}</h5>
+                                <small class="text-muted">Заявок</small>
                             </div>
-                        </div>
-                        <p class="mb-1 mt-2">{{ project.description[:100] }}...</p>
-                        <div class="mt-2">
-                            <span class="badge bg-info">{{ project.difficulty }}</span>
-                            <span class="badge bg-secondary">{{ project.category }}</span>
-                            <span class="badge bg-{{ 'success' if project.location_type == 'online' else 'secondary' }}">
-                                {{ 'Онлайн' if project.location_type == 'online' else 'Очно' if project.location_type == 'offline' else 'Гибрид' }}
-                            </span>
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                    <p>У вас еще нет проектов</p>
-                    <a href="{{ url_for('create_project') }}" class="btn btn-primary">
-                        <i class="fas fa-plus-circle"></i> Создать первый проект
+            </div>
+
+            <!-- О себе (если заполнено) -->
+            {% if current_user.bio %}
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-user-circle me-2"></i>О себе</h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ current_user.bio }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Правая колонка - проекты и заявки -->
+        <div class="col-md-8">
+            <!-- Мои проекты -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Мои проекты</h5>
+                    <a href="{{ url_for('create_project') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus"></i> Новый проект
                     </a>
                 </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Мои заявки -->
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Мои заявки</h5>
-            </div>
-            <div class="card-body">
-                {% if applications %}
-                <div class="list-group">
-                    {% for app in applications %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">{{ app.project.title }}</h6>
-                                <small class="text-muted">
-                                    Подана: {{ app.created_at.strftime('%d.%m.%Y') }}
+                <div class="card-body">
+                    {% if user_projects %}
+                    <div class="list-group list-group-flush">
+                        {% for project in user_projects %}
+                        <div class="list-group-item border-0 px-0 py-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="me-3">
+                                    <h6 class="mb-1">{{ project.title }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Создан: {{ project.created_at.strftime('%d.%m.%Y') }}
+                                    </small>
+                                    <div class="mt-2">
+                                        <span class="badge bg-info me-1">{{ project.difficulty }}</span>
+                                        <span class="badge bg-secondary me-1">{{ project.category }}</span>
+                                        <span class="badge bg-{{ 'success' if project.location_type == 'online' else 'secondary' if project.location_type == 'offline' else 'warning' }}">
+                                            {{ 'Онлайн' if project.location_type == 'online' else 'Очно' if project.location_type == 'offline' else 'Гибрид' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('project_detail', project_id=project.id) }}"
+                                       class="btn btn-outline-primary" title="Просмотреть">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('edit_project', project_id=project.id) }}"
+                                       class="btn btn-outline-warning" title="Редактировать">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('project_applications', project_id=project.id) }}"
+                                       class="btn btn-outline-info" title="Заявки">
+                                        <i class="fas fa-users"></i>
+                                        {% if project.applications %}
+                                        <span class="badge bg-danger ms-1">{{ project.applications|length }}</span>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                            </div>
+                            <p class="mb-0 mt-2 text-muted">{{ project.description[:100] }}...</p>
+
+                            <!-- Заявки на проект -->
+                            {% if project.applications %}
+                            <div class="mt-3">
+                                <small class="text-success">
+                                    <i class="fas fa-bell me-1"></i>
+                                    Есть новые заявки на ваш проект
                                 </small>
                             </div>
-                            <div>
-                                <span class="badge bg-{{ 'success' if app.status == 'accepted' else 'warning' if app.status == 'pending' else 'secondary' }}">
-                                    {{ 'Принята' if app.status == 'accepted' else 'На рассмотрении' if app.status == 'pending' else 'Отклонена' }}
-                                </span>
-                            </div>
-                        </div>
-                        <p class="mb-1 mt-2">
-                            <strong>Роль:</strong> {{ app.applied_role or 'Не указана' }}
-                        </p>
-                        {% if app.message %}
-                        <p class="mb-1"><strong>Сообщение:</strong> {{ app.message[:100] }}...</p>
-                        {% endif %}
-
-                        <div class="mt-3 d-flex justify-content-between">
-                            <a href="{{ url_for('project_detail', project_id=app.project.id) }}"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-external-link-alt"></i> К проекту
-                            </a>
-
-                            {% if app.status == 'pending' %}
-                            <form method="POST"
-                                  action="{{ url_for('cancel_application', app_id=app.id) }}"
-                                  onsubmit="return confirm('Отменить заявку?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="fas fa-times"></i> Отменить
-                                </button>
-                            </form>
                             {% endif %}
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                        <h5>У вас еще нет проектов</h5>
+                        <p class="text-muted mb-4">Создайте свой первый проект и пригласите других студентов</p>
+                        <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-1"></i> Создать проект
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <p>У вас еще нет заявок</p>
-                    <a href="{{ url_for('projects') }}" class="btn btn-info">
-                        <i class="fas fa-search"></i> Найти проекты
-                    </a>
+            </div>
+
+            <!-- Мои заявки -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Мои заявки</h5>
                 </div>
-                {% endif %}
+                <div class="card-body">
+                    {% if applications %}
+                    <div class="list-group list-group-flush">
+                        {% for app in applications %}
+                        <div class="list-group-item border-0 px-0 py-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="me-3">
+                                    <h6 class="mb-1">{{ app.project.title }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Подана: {{ app.created_at.strftime('%d.%m.%Y') }}
+                                    </small>
+                                    <div class="mt-2">
+                                        <span class="badge bg-{{ 'success' if app.status == 'accepted' else 'warning' if app.status == 'pending' else 'secondary' }}">
+                                            {{ 'Принята' if app.status == 'accepted' else 'На рассмотрении' if app.status == 'pending' else 'Отклонена' }}
+                                        </span>
+                                        {% if app.applied_role %}
+                                        <span class="badge bg-primary">{{ app.applied_role }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('project_detail', project_id=app.project.id) }}"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> К проекту
+                                    </a>
+
+                                    {% if app.status == 'pending' %}
+                                    <form method="POST"
+                                          action="{{ url_for('cancel_application', app_id=app.id) }}"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Вы уверены, что хотите отменить заявку?');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-times"></i> Отменить
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if app.message %}
+                            <div class="mt-3">
+                                <p class="mb-1"><strong>Ваше сообщение:</strong></p>
+                                <p class="text-muted mb-0">{{ app.message[:150] }}{% if app.message|length > 150 %}...{% endif %}</p>
+                            </div>
+                            {% endif %}
+
+                            <!-- Ответ от создателя (если есть) -->
+                            {% if app.status == 'accepted' %}
+                            <div class="mt-3 alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Поздравляем!</strong> Ваша заявка принята. Свяжитесь с создателем проекта для дальнейших действий.
+                            </div>
+                            {% elif app.status == 'rejected' %}
+                            <div class="mt-3 alert alert-secondary">
+                                <i class="fas fa-times-circle me-2"></i>
+                                К сожалению, ваша заявка отклонена. Не расстраивайтесь, попробуйте подать заявку на другие проекты!
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5>У вас еще нет заявок</h5>
+                        <p class="text-muted mb-4">Найдите интересный проект и подайте заявку на участие</p>
+                        <a href="{{ url_for('projects') }}" class="btn btn-info">
+                            <i class="fas fa-search me-1"></i> Найти проекты
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Быстрые действия -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Быстрые действия</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{{ url_for('create_project') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-plus-circle me-2"></i> Создать проект
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-search me-2"></i> Найти проекты
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('search_projects') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-filter me-2"></i> Расширенный поиск
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-sign-out-alt me-2"></i> Выйти
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления элементов
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100 + 300);
+    });
+
+    // Подсветка статусов заявок
+    const statusBadges = document.querySelectorAll('.badge');
+    statusBadges.forEach(badge => {
+        if (badge.textContent.includes('Принята')) {
+            badge.classList.add('shadow-sm');
+        }
+    });
+
+    // Подтверждение отмены заявки
+    const cancelForms = document.querySelectorAll('form[action*="cancel_application"]');
+    cancelForms.forEach(form => {
+        const button = form.querySelector('button[type="submit"]');
+        if (button) {
+            button.addEventListener('click', function(e) {
+                if (!confirm('Вы уверены, что хотите отменить заявку?')) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+
+    // Плавная прокрутка к проектам/заявкам при клике на статистику
+    const projectCount = document.querySelector('.col-6:first-child h5');
+    const applicationCount = document.querySelector('.col-6:last-child h5');
+
+    if (projectCount) {
+        projectCount.style.cursor = 'pointer';
+        projectCount.addEventListener('click', () => {
+            document.querySelector('#projects-section')?.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
+    if (applicationCount) {
+        applicationCount.style.cursor = 'pointer';
+        applicationCount.addEventListener('click', () => {
+            document.querySelector('#applications-section')?.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+});
+</script>
 {% endblock %}

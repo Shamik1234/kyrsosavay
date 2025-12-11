@@ -1,129 +1,246 @@
 {% extends "base.html" %}
 
-{% block title %}Поиск проектов - Colab Hub{% endblock %}
+{% block title %}Все проекты - Colab Hub{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="mb-4">Поиск проектов</h1>
-        
-        <!-- Форма поиска -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="GET" action="{{ url_for('search_projects') }}" class="row g-3">
-                    <div class="col-md-6">
-                        <input type="text" 
-                               class="form-control" 
-                               name="q" 
-                               placeholder="Поиск по названию или описанию..."
-                               value="{{ search_query or '' }}">
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="category">
-                            <option value="all" {% if not selected_category %}selected{% endif %}>Все категории</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>
-                                {{ cat }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="university">
-                            <option value="all" {% if not selected_university %}selected{% endif %}>Все ВУЗы</option>
-                            {% for uni in universities %}
-                            <option value="{{ uni }}" {% if selected_university == uni %}selected{% endif %}>
-                                {{ uni or 'Все ВУЗы' }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="difficulty">
-                            <option value="all" {% if not selected_difficulty %}selected{% endif %}>Любая сложность</option>
-                            <option value="beginner" {% if selected_difficulty == 'beginner' %}selected{% endif %}>Для начинающих</option>
-                            <option value="intermediate" {% if selected_difficulty == 'intermediate' %}selected{% endif %}>Средний уровень</option>
-                            <option value="advanced" {% if selected_difficulty == 'advanced' %}selected{% endif %}>Продвинутый</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Найти проекты
-                        </button>
-                        <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Сбросить фильтры
-                        </a>
-                    </div>
-                </form>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Все проекты</h1>
+        <a href="{{ url_for('search_projects') }}" class="btn btn-outline-primary">
+            <i class="fas fa-search"></i> Расширенный поиск
+        </a>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-lightbulb me-3 fa-2x"></i>
+            <div>
+                <h5 class="alert-heading mb-1">Нашли интересный проект?</h5>
+                <p class="mb-0">Подайте заявку или создайте свой собственный проект!</p>
+            </div>
+            <div class="ms-auto">
+                <a href="{{ url_for('create_project') }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Создать проект
+                </a>
             </div>
         </div>
-        
-        <!-- Результаты поиска -->
-        {% if projects %}
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            {% for project in projects %}
-            <div class="col">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ project.title }}</h5>
-                        <p class="card-text text-muted small">
-                            <i class="fas fa-university me-1"></i>
-                            {{ project.university_filter or 'Все ВУЗы' }}
-                        </p>
-                        <p class="card-text">{{ project.description[:100] }}...</p>
-                        
-                        <div class="mb-3">
-                            <span class="badge bg-info me-1">
-                                {{ 'Начинающий' if project.difficulty == 'beginner' else 'Средний' if project.difficulty == 'intermediate' else 'Продвинутый' }}
-                            </span>
-                            <span class="badge bg-secondary me-1">{{ project.category }}</span>
-                            {% if project.location_type == 'online' %}
-                            <span class="badge bg-success">Онлайн</span>
-                            {% elif project.location_type == 'offline' %}
-                            <span class="badge bg-secondary">Очно</span>
-                            {% else %}
-                            <span class="badge bg-warning text-dark">Гибрид</span>
-                            {% endif %}
-                        </div>
-                        
-                        {% if project.needed_roles %}
-                        <p class="small text-muted mb-2">
-                            <strong>Нужны:</strong>
-                            {% set roles = project.needed_roles.split('\n') %}
-                            {% for role_line in roles[:2] %}
-                                {% if ':' in role_line %}
-                                    {{ role_line.split(':')[0] }}{% if not loop.last %}, {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                            {% if roles|length > 2 %}...{% endif %}
-                        </p>
+    </div>
+    {% endif %}
+
+    {% if projects.items %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for project in projects.items %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.title }}</h5>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="fas fa-university me-1"></i>
+                        {{ project.university_filter or 'Все ВУЗы' }}
+                    </p>
+                    <p class="card-text">{{ project.description[:150] }}...</p>
+
+                    <div class="mb-3">
+                        <span class="badge bg-info me-1">
+                            {{ 'Начинающий' if project.difficulty == 'beginner' else 'Средний' if project.difficulty == 'intermediate' else 'Продвинутый' }}
+                        </span>
+                        <span class="badge bg-secondary me-1">{{ project.category }}</span>
+                        {% if project.location_type == 'online' %}
+                        <span class="badge bg-success">Онлайн</span>
+                        {% elif project.location_type == 'offline' %}
+                        <span class="badge bg-secondary">Очно</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Гибрид</span>
                         {% endif %}
                     </div>
-                    <div class="card-footer bg-white">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ url_for('project_detail', project_id=project.id) }}" 
-                               class="btn btn-sm btn-primary">
-                                Подробнее
-                            </a>
-                            <small class="text-muted">
-                                {{ project.created_at.strftime('%d.%m.%Y') }}
-                            </small>
+
+                    {% if project.needed_roles %}
+                    <div class="mb-3">
+                        <p class="small text-muted mb-1"><strong>Требуются:</strong></p>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% set roles = project.needed_roles.split('\n') %}
+                            {% for role_line in roles[:3] %}
+                                {% if ':' in role_line %}
+                                <span class="badge bg-light text-dark border">
+                                    {{ role_line.split(':')[0] }}
+                                </span>
+                                {% endif %}
+                            {% endfor %}
+                            {% if roles|length > 3 %}
+                            <span class="badge bg-light text-dark border">+{{ roles|length - 3 }}</span>
+                            {% endif %}
                         </div>
                     </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ project.created_at.strftime('%d.%m.%Y') }}
+                        </small>
+                        <span class="text-muted small">
+                            <i class="fas fa-user me-1"></i>
+                            {{ project.creator.username }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top-0 pt-0">
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}"
+                       class="btn btn-primary w-100">
+                        <i class="fas fa-eye me-1"></i> Подробнее
+                    </a>
                 </div>
             </div>
-            {% endfor %}
         </div>
+        {% endfor %}
+    </div>
+
+    <!-- Пагинация -->
+    {% if projects.pages > 1 %}
+    <nav aria-label="Навигация по страницам" class="mt-5">
+        <ul class="pagination justify-content-center">
+            {% if projects.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('projects', page=projects.prev_num) }}">
+                    <i class="fas fa-chevron-left"></i> Назад
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i> Назад</span>
+            </li>
+            {% endif %}
+
+            {% for page_num in projects.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == projects.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('projects', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if projects.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('projects', page=projects.next_num) }}">
+                    Вперед <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Вперед <i class="fas fa-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div class="text-center mt-2">
+            <small class="text-muted">
+                Страница {{ projects.page }} из {{ projects.pages }} •
+                Всего проектов: {{ projects.total }}
+            </small>
+        </div>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-folder-open fa-4x text-muted"></i>
+        </div>
+        <h3 class="mb-3">Пока нет проектов</h3>
+        <p class="text-muted mb-4">Будьте первым, кто создаст проект на платформе!</p>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('create_project') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus-circle me-2"></i> Создать первый проект
+        </a>
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-            <h4>Проекты не найдены</h4>
-            <p class="text-muted">Попробуйте изменить параметры поиска</p>
-            <a href="{{ url_for('create_project') }}" class="btn btn-primary">
-                <i class="fas fa-plus-circle"></i> Создать первый проект
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('login') }}" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i> Войти
+            </a>
+            <a href="{{ url_for('register') }}" class="btn btn-outline-primary">
+                <i class="fas fa-user-plus me-2"></i> Зарегистрироваться
             </a>
         </div>
         {% endif %}
     </div>
+    {% endif %}
+
+    <!-- Статистика -->
+    <div class="card mt-5">
+        <div class="card-body">
+            <h5 class="card-title">Статистика платформы</h5>
+            <div class="row text-center">
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h3 class="text-primary mb-1">{{ projects.total }}</h3>
+                        <p class="mb-0 text-muted">Проектов</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h3 class="text-primary mb-1">{{ projects.pages }}</h3>
+                        <p class="mb-0 text-muted">Страниц</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h3 class="text-primary mb-1">{{ 9 if projects.total > 9 else projects.total }}</h3>
+                        <p class="mb-0 text-muted">На странице</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="p-3 bg-light rounded">
+                        <h3 class="text-primary mb-1">
+                            {% if projects.has_next %}
+                            Есть
+                            {% else %}
+                            Нет
+                            {% endif %}
+                        </h3>
+                        <p class="mb-0 text-muted">Следующая страница</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация карточек
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+    });
+
+    // Постепенное появление карточек
+    setTimeout(() => {
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    }, 300);
+
+    // Подсветка активной страницы в пагинации
+    const activePage = document.querySelector('.page-item.active');
+    if (activePage) {
+        activePage.classList.add('shadow');
+    }
+});
+</script>
 {% endblock %}

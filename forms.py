@@ -96,3 +96,15 @@ class ApplicationForm(FlaskForm):
     applied_role = SelectField('На какую роль вы претендуете?', choices=[])
     message = TextAreaField('Расскажите о себе', validators=[DataRequired()])
     submit = SubmitField('Подать заявку')
+
+class EditProfileForm(FlaskForm):
+    full_name = StringField('ФИО', validators=[DataRequired()])
+    university = StringField('ВУЗ', validators=[DataRequired()])
+    faculty = StringField('Факультет', validators=[DataRequired()])
+    course = SelectField('Курс', choices=[
+        ('1', '1 курс'), ('2', '2 курс'), ('3', '3 курс'),
+        ('4', '4 курс'), ('5', '5 курс'), ('6', '6 курс')
+    ], validators=[DataRequired()])
+    skills = StringField('Навыки (через запятую)')
+    bio = TextAreaField('О себе')
+    submit = SubmitField('Сохранить изменения')

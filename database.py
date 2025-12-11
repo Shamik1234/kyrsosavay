@@ -17,6 +17,7 @@ class User(UserMixin, db.Model):
     course = db.Column(db.Integer)
     skills = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    bio = db.Column(db.Text)
 
     projects = db.relationship('Project', backref='creator', lazy=True)
     applications = db.relationship('Application', backref='applicant', lazy=True)
