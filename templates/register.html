@@ -32,10 +32,31 @@
                         </div>
                     </div>
                     
+                    <!-- БЛОК ПАРОЛЕЙ - ИСПРАВЛЕН -->
                     <div class="mb-3">
                         {{ form.password.label(class="form-label") }}
                         {{ form.password(class="form-control", placeholder="Не менее 6 символов") }}
+                        {% if form.password.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.password.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
+                    <div class="mb-3">
+                        {{ form.confirm_password.label(class="form-label") }}
+                        {{ form.confirm_password(class="form-control", placeholder="Повторите пароль") }}
+                        {% if form.confirm_password.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.confirm_password.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <!-- КОНЕЦ БЛОКА ПАРОЛЕЙ -->
                     
                     <div class="mb-3">
                         {{ form.full_name.label(class="form-label") }}
