@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField, SelectMultipleField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
 from wtforms import ValidationError
 from database import User
@@ -49,7 +49,15 @@ class ProjectForm(FlaskForm):
         ('social', 'Социальные проекты'),
         ('other', 'Другое')
     ])
-    needed_roles = TextAreaField('Требуемые роли (каждая с новой строки: "роль:уровень")')
+    needed_roles = SelectMultipleField('Требуемые роли', choices=[
+        ('backend', 'Backend-разработчик'),
+        ('frontend', 'Frontend-разработчик'),
+        ('designer', 'Дизайнер'),
+        ('manager', 'Менеджер проекта'),
+        ('analyst', 'Аналитик'),
+        ('marketing', 'Маркетолог'),
+        ('other', 'Другое')
+    ], validators=[DataRequired()])
     difficulty = SelectField('Сложность', choices=[
         ('beginner', 'Для начинающих'),
         ('intermediate', 'Средний уровень'),

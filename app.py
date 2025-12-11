@@ -428,6 +428,36 @@ def edit_profile():
 
     return render_template('edit_profile.html', form=form)
 
+
+@app.route('/students')
+def students():
+    search = request.args.get('search', '')
+    university = request.args.get('university', '')
+    skill_filter = request.args.get('skill', '')
+
+    query = User.query
+
+    if search:
+        query = query.filter(
+            (User.username.ilike(f'%{search}%')) |
+            (User.full_name.ilike(f'%{search}%'))
+        )
+
+    if university:
+        query = query.filter(User.university == university)
+
+    if skill_filter:
+        query = query.filter(User.skills.ilike(f'%{skill_filter}%'))
+
+    students = query.order_by(User.created_at.desc()).all()
+
+    # Получаем уникальные вузы для фильтра
+    universities = db.session.query(User.university).distinct().all()
+
+    return render_template('students.html',
+                           students=students,
+                           universities=[u[0] for u in universities if u[0]],
+                           current_user=current_user)
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 
 with app.app_context():

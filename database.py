@@ -50,3 +50,16 @@ class Application(db.Model):
     # Добавьте эти отношения:
     user = db.relationship('User', foreign_keys=[user_id])
     project = db.relationship('Project', foreign_keys=[project_id])
+
+
+# В database.py добавить:
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    application_id = db.Column(db.Integer, db.ForeignKey('application.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read = db.Column(db.Boolean, default=False)
+
+    application = db.relationship('Application', backref='messages')
+    sender = db.relationship('User', foreign_keys=[sender_id])
