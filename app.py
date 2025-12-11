@@ -1,12 +1,14 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required, current_user
 import os
 from database import db, login_manager, User
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
+from forms import LoginForm, RegisterForm
 
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
     # Настройка базы данных
     database_url = os.environ.get('DATABASE_URL')
@@ -28,10 +30,11 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Маршруты
+    # ========== МАРШРУТЫ ==========
+
     @app.route('/')
     def index():
-        return render_template('index.html')
+        return render_template('index.html', current_user=current_user)
 
     @app.route('/health')
     def health():
@@ -49,9 +52,87 @@ def create_app():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    # Создаем таблицы и тестового пользователя
+    # ---------- АВТОРИЗАЦИЯ ----------
+
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for('index'))
+
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(email=form.email.data).first()
+            if user and check_password_hash(user.password_hash, form.password.data):
+                login_user(user, remember=True)
+                flash('Вы успешно вошли в систему!', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Неверный email или пароль', 'danger')
+
+        return render_template('login.html', form=form)
+
+    @app.route('/register', methods=['GET', 'POST'])
+    def register():
+        if current_user.is_authenticated:
+            return redirect(url_for('index'))
+
+        form = RegisterForm()
+        if form.validate_on_submit():
+            # Проверяем, нет ли уже такого пользователя
+            existing_user = User.query.filter(
+                (User.email == form.email.data) | (User.username == form.username.data)
+            ).first()
+
+            if existing_user:
+                flash('Пользователь с таким email или логином уже существует', 'danger')
+                return redirect(url_for('register'))
+
+            # Создаем нового пользователя
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                password_hash=generate_password_hash(form.password.data),
+                full_name=form.full_name.data,
+                university=form.university.data,
+                faculty=form.faculty.data,
+                course=int(form.course.data),
+                skills=form.skills.data
+            )
+
+            db.session.add(user)
+            db.session.commit()
+
+            flash('Регистрация успешна! Теперь войдите в систему.', 'success')
+            return redirect(url_for('login'))
+
+        return render_template('register.html', form=form)
+
+    @app.route('/logout')
+    @login_required
+    def logout():
+        logout_user()
+        flash('Вы вышли из системы', 'info')
+        return redirect(url_for('index'))
+
+    @app.route('/profile')
+    @login_required
+    def profile():
+        return render_template('profile.html', user=current_user)
+
+    # ---------- ПРОЕКТЫ ----------
+
+    @app.route('/projects')
+    def projects():
+        from database import Project
+        projects = Project.query.filter_by(status='active').order_by(Project.created_at.desc()).all()
+        return render_template('projects.html', projects=projects, current_user=current_user)
+
+    # Создаем таблицы при запуске
     with app.app_context():
+        # Импортируем здесь чтобы избежать циклических импортов
+        from database import Project, Application
         db.create_all()
+
         # Создаем тестового пользователя если база пустая
         if User.query.count() == 0:
             test_user = User(
@@ -65,6 +146,22 @@ def create_app():
                 skills='Python, Flask, SQL'
             )
             db.session.add(test_user)
+
+            # Создаем тестовый проект
+            test_project = Project(
+                title='Тестовый проект: Разработка платформы',
+                description='Разрабатываем платформу для студенческих проектов',
+                category='it',
+                difficulty='intermediate',
+                location_type='online',
+                university_filter='МГУ',
+                faculty_filter='Факультет информатики',
+                estimated_duration='3 месяца',
+                needed_roles='backend:middle\nfrontend:beginner\ndesigner:any',
+                creator_id=1
+            )
+            db.session.add(test_project)
+
             db.session.commit()
 
     return app
