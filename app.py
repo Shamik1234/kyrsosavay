@@ -347,27 +347,6 @@ def create_app():
         db.session.commit()
         return redirect(url_for('project_applications', project_id=project.id))
 
-    @app.route('/project/<int:project_id>/delete', methods=['POST'])
-    @login_required
-    def delete_project(project_id):
-        from database import Project, Application
-
-        project = Project.query.get_or_404(project_id)
-
-        # Проверяем, что текущий пользователь - создатель проекта
-        if project.creator_id != current_user.id:
-            flash('У вас нет прав удалить этот проект', 'danger')
-            return redirect(url_for('index'))
-
-        # Удаляем все связанные заявки
-        Application.query.filter_by(project_id=project_id).delete()
-
-        # Удаляем проект
-        db.session.delete(project)
-        db.session.commit()
-
-        flash('Проект успешно удален', 'success')
-        return redirect(url_for('profile'))
 
     # ---------- ЗАЯВКИ ----------
 
