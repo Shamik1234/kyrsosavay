@@ -106,5 +106,4 @@ class EditProfileForm(FlaskForm):
         ('4', '4 курс'), ('5', '5 курс'), ('6', '6 курс')
     ], validators=[DataRequired()])
     skills = StringField('Навыки (через запятую)')
-    bio = TextAreaField('О себе')
     submit = SubmitField('Сохранить изменения')

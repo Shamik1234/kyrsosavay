@@ -433,36 +433,6 @@ def edit_profile():
 with app.app_context():
     db.create_all()
 
-    # Создаем тестового пользователя если база пустая
-    if User.query.count() == 0:
-        test_user = User(
-            username='testuser',
-            email='test@example.com',
-            password_hash=generate_password_hash('password123'),
-            full_name='Тестовый Пользователь',
-            university='МГУ',
-            faculty='Факультет информатики',
-            course=3,
-            skills='Python, Flask, SQL'
-        )
-        db.session.add(test_user)
-
-        # Создаем тестовый проект
-        test_project = Project(
-            title='Тестовый проект: Разработка платформы',
-            description='Разрабатываем платформу для студенческих проектов',
-            category='it',
-            difficulty='intermediate',
-            location_type='online',
-            university_filter='МГУ',
-            faculty_filter='Факультет информатики',
-            estimated_duration='3 месяца',
-            needed_roles='backend:middle\nfrontend:beginner\ndesigner:any',
-            creator_id=1
-        )
-        db.session.add(test_project)
-
-        db.session.commit()
 
 # В конец app.py перед if __name__ == '__main__' добавьте:
 

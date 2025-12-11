@@ -15,45 +15,130 @@
                     
                     <div class="mb-3">
                         {{ form.full_name.label(class="form-label") }}
-                        {{ form.full_name(class="form-control") }}
+                        {{ form.full_name(class="form-control", placeholder="Иванов Иван Иванович") }}
+                        {% if form.full_name.errors %}
+                        <div class="text-danger small">
+                            {% for error in form.full_name.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ form.university.label(class="form-label") }}
-                            {{ form.university(class="form-control") }}
+                            {{ form.university(class="form-control", placeholder="Название вашего ВУЗа") }}
+                            {% if form.university.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.university.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             {{ form.faculty.label(class="form-label") }}
-                            {{ form.faculty(class="form-control") }}
+                            {{ form.faculty(class="form-control", placeholder="Ваш факультет") }}
+                            {% if form.faculty.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.faculty.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ form.course.label(class="form-label") }}
                             {{ form.course(class="form-select") }}
+                            {% if form.course.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.course.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             {{ form.skills.label(class="form-label") }}
-                            {{ form.skills(class="form-control", placeholder="Python, Flask, HTML, CSS...") }}
+                            {{ form.skills(class="form-control", placeholder="Python, HTML, Design...") }}
+                            {% if form.skills.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.skills.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        {{ form.bio.label(class="form-label") }}
-                        {{ form.bio(class="form-control", rows=4, placeholder="Расскажите о себе, своих интересах и целях...") }}
-                    </div>
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                         <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary me-md-2">
-                            Отмена
+                            <i class="fas fa-times me-1"></i> Отмена
                         </a>
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
             </div>
         </div>
+
+        <!-- Информация о профиле -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Информация</h5>
+                <p class="card-text small text-muted">
+                    • Ваш email и логин нельзя изменить<br>
+                    • Информация о курсе обновляется автоматически<br>
+                    • Навыки помогают другим студентам найти вас для проектов
+                </p>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления формы
+    const formCard = document.querySelector('.card');
+    formCard.style.opacity = '0';
+    formCard.style.transform = 'translateY(20px)';
+
+    setTimeout(() => {
+        formCard.style.transition = 'all 0.5s ease';
+        formCard.style.opacity = '1';
+        formCard.style.transform = 'translateY(0)';
+    }, 300);
+
+    // Валидация формы
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('[type="submit"]');
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Пожалуйста, заполните все обязательные поля');
+            } else {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Сохранение...';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
