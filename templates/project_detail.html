@@ -3,106 +3,124 @@
 {% block title %}{{ project.title }} - Colab Hub{% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Заголовок проекта -->
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-            <h1 class="mb-2">{{ project.title }}</h1>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge bg-primary fs-6">{{ project.category }}</span>
-                <span class="badge bg-info fs-6">
-                    {{ 'Для начинающих' if project.difficulty == 'beginner' else 'Средний уровень' if project.difficulty == 'intermediate' else 'Продвинутый' }}
-                </span>
-                {% if project.location_type == 'online' %}
-                <span class="badge bg-success fs-6">Онлайн</span>
-                {% elif project.location_type == 'offline' %}
-                <span class="badge bg-secondary fs-6">Очно</span>
-                {% else %}
-                <span class="badge bg-warning text-dark fs-6">Гибрид</span>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Кнопки управления (только для создателя) -->
-        {% if current_user.is_authenticated and project.creator_id == current_user.id %}
-        <div class="btn-group">
-            <a href="{{ url_for('edit_project', project_id=project.id) }}"
-               class="btn btn-outline-primary">
-                <i class="fas fa-edit"></i> Редактировать
-            </a>
-            <button type="button"
-                    class="btn btn-outline-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#deleteModal">
-                <i class="fas fa-trash"></i> Удалить
-            </button>
-        </div>
-        {% endif %}
-    </div>
+<div class="container py-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Главная</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Проекты</a></li>
+            <li class="breadcrumb-item active">{{ project.title|truncate(30) }}</li>
+        </ol>
+    </nav>
 
     <div class="row">
         <!-- Основная информация -->
         <div class="col-lg-8">
-            <!-- Описание проекта -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Описание проекта</h5>
-                    <p class="card-text">{{ project.description }}</p>
-
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-university me-2"></i>ВУЗ:</strong>
-                               {{ project.university_filter or 'Все ВУЗы' }}</p>
-                            <p><strong><i class="fas fa-graduation-cap me-2"></i>Факультет:</strong>
-                               {{ project.faculty_filter or 'Не указано' }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-clock me-2"></i>Длительность:</strong>
-                               {{ project.estimated_duration or 'Не указана' }}</p>
-                            <p><strong><i class="fas fa-calendar me-2"></i>Создан:</strong>
-                               {{ project.created_at.strftime('%d.%m.%Y') }}</p>
-                        </div>
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">{{ project.title }}</h3>
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-calendar"></i> {{ project.created_at.strftime('%d.%m.%Y') }}
+                        </span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Требуемые роли -->
-            {% if needed_roles %}
-            <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Требуются специалисты</h5>
-                    <div class="row g-3">
-                        {% for role in needed_roles %}
+                    <!-- Категория и сложность -->
+                    <div class="row mb-4">
                         <div class="col-md-6">
-                            <div class="border rounded p-3">
-                                <h6 class="mb-2">{{ role.role }}</h6>
-                                <span class="badge bg-secondary">Уровень: {{ role.level }}</span>
+                            <span class="badge bg-info mb-2">
+                                {% if project.category == 'it' %}IT и Разработка
+                                {% elif project.category == 'business' %}Бизнес и Стартапы
+                                {% elif project.category == 'design' %}Дизайн и Креатив
+                                {% elif project.category == 'science' %}Наука и Исследования
+                                {% elif project.category == 'social' %}Социальные проекты
+                                {% else %}Другое{% endif %}
+                            </span>
+
+                            <span class="badge {% if project.difficulty == 'beginner' %}bg-success
+                                            {% elif project.difficulty == 'intermediate' %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                {% if project.difficulty == 'beginner' %}Для начинающих
+                                {% elif project.difficulty == 'intermediate' %}Средний уровень
+                                {% else %}Продвинутый{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-map-marker-alt"></i>
+                                {% if project.location_type == 'online' %}Онлайн
+                                {% elif project.location_type == 'offline' %}Очно
+                                {% else %}Гибрид{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Описание проекта -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">Описание проекта</h5>
+                        <p class="lead">{{ project.description|replace('\n', '<br>'|safe) }}</p>
+                    </div>
+
+                    <!-- Требуемые роли -->
+                    {% if needed_roles %}
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-users me-2"></i>Требуемые роли
+                        </h5>
+                        <div class="row">
+                            {% for role_item in needed_roles %}
+                            <div class="col-md-6 mb-2">
+                                <div class="card border">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between">
+                                            <strong>{{ role_item.role }}</strong>
+                                            <span class="badge bg-light text-dark">{{ role_item.level }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Дополнительная информация -->
+                    <div class="row">
+                        {% if project.estimated_duration %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-clock me-2"></i>Сроки</h6>
+                                    <p class="card-text">{{ project.estimated_duration }}</p>
+                                </div>
                             </div>
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+                        {% endif %}
 
-            <!-- Информация о создателе -->
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Создатель проекта</h5>
-                    <div class="d-flex align-items-center">
-                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-                             style="width: 50px; height: 50px; font-size: 1.5rem;">
-                            {{ project.creator.username[0]|upper }}
+                        {% if project.university_filter %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-university me-2"></i>ВУЗ</h6>
+                                    <p class="card-text">{{ project.university_filter }}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="ms-3">
-                            <h6 class="mb-1">{{ project.creator.full_name or project.creator.username }}</h6>
-                            <p class="text-muted mb-0">
-                                <i class="fas fa-university me-1"></i>{{ project.creator.university }}
-                            </p>
-                            <p class="text-muted mb-0">
-                                <i class="fas fa-graduation-cap me-1"></i>{{ project.creator.faculty }}, {{ project.creator.course }} курс
-                            </p>
+                        {% endif %}
+
+                        {% if project.faculty_filter %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-graduation-cap me-2"></i>Факультет</h6>
+                                    <p class="card-text">{{ project.faculty_filter }}</p>
+                                </div>
+                            </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -110,96 +128,138 @@
 
         <!-- Боковая панель -->
         <div class="col-lg-4">
-            <!-- Статус заявки -->
-            {% if current_user.is_authenticated %}
-            <div class="card mb-4">
-                <div class="card-body">
-                    {% if project.creator_id == current_user.id %}
-                    <h5 class="card-title">Управление проектом</h5>
-                    <p class="card-text">Вы создатель этого проекта</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('edit_project', project_id=project.id) }}"
-                           class="btn btn-primary">
-                            <i class="fas fa-edit"></i> Редактировать
-                        </a>
-                        <a href="{{ url_for('project_applications', project_id=project.id) }}"
-                           class="btn btn-info">
-                            <i class="fas fa-users"></i> Заявки
-                        </a>
+            <!-- Автор проекта -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>Автор проекта</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <div class="avatar-placeholder bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center"
+                             style="width: 80px; height: 80px; font-size: 2rem;">
+                            {{ project.creator.username[0]|upper }}
+                        </div>
                     </div>
-
-                    {% elif has_applied %}
-                    <h5 class="card-title">Ваша заявка</h5>
-                    <p class="card-text text-success">
-                        <i class="fas fa-check-circle"></i> Вы уже подали заявку на этот проект
+                    <h5>{{ project.creator.username }}</h5>
+                    {% if project.creator.university %}
+                    <p class="text-muted">
+                        <i class="fas fa-university me-1"></i>{{ project.creator.university }}
                     </p>
-                    <form method="POST"
-                          action="{{ url_for('cancel_application', app_id=has_applied.id) }}"
-                          onsubmit="return confirm('Вы уверены, что хотите отменить заявку?');">
-                        <button type="submit" class="btn btn-outline-danger w-100">
-                            <i class="fas fa-times"></i> Отменить заявку
-                        </button>
-                    </form>
-
-                    {% else %}
-                    <h5 class="card-title">Хотите в команду?</h5>
-                    <p class="card-text">Подайте заявку на участие в проекте</p>
-
-                    <!-- Форма подачи заявки -->
-                    <form method="POST" action="{{ url_for('apply_to_project', project_id=project.id) }}">
-                        <div class="mb-3">
-                            <label for="role" class="form-label">Выберите роль</label>
-                            <select class="form-select" id="role" name="role" required>
-                                <option value="">-- Выберите роль --</option>
-                                {% for role in needed_roles %}
-                                <option value="{{ role.role }}">{{ role.role }} ({{ role.level }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="message" class="form-label">Расскажите о себе</label>
-                            <textarea class="form-control" id="message" name="message" rows="3"
-                                      placeholder="Почему вы хотите участвовать в проекте? Какие у вас навыки?" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-paper-plane"></i> Подать заявку
-                        </button>
-                    </form>
+                    {% endif %}
+                    {% if project.creator.faculty %}
+                    <p class="text-muted">
+                        <i class="fas fa-graduation-cap me-1"></i>{{ project.creator.faculty }}
+                    </p>
                     {% endif %}
                 </div>
             </div>
-            {% else %}
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Хотите присоединиться?</h5>
-                    <p class="card-text">Войдите или зарегистрируйтесь, чтобы подать заявку на участие</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('login') }}" class="btn btn-primary">Войти</a>
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">Регистрация</a>
+
+            <!-- Заявка на участие -->
+            {% if current_user.is_authenticated %}
+                {% if project.creator_id != current_user.id %}
+                    {% if not has_applied %}
+                        {% if needed_roles %}
+                        <div class="card shadow mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Подать заявку</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('apply_to_project', project_id=project.id) }}">
+                                    <div class="mb-3">
+                                        <label for="role" class="form-label">Выберите роль *</label>
+                                        <select name="role" class="form-select" id="role" required>
+                                            <option value="">-- Выберите роль --</option>
+                                            {% for role_item in needed_roles %}
+                                            <option value="{{ role_item.role }}">{{ role_item.role }} ({{ role_item.level }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="message" class="form-label">Расскажите о себе *</label>
+                                        <textarea name="message" class="form-control" id="message"
+                                                  rows="4" placeholder="Почему вы подходите для этой роли? Какие у вас есть навыки?"
+                                                  required></textarea>
+                                        <div class="form-text">Минимум 20 символов</div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-paper-plane me-2"></i>Отправить заявку
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            В проекте не указаны требуемые роли
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Вы уже подали заявку на этот проект
                     </div>
+                    {% endif %}
+                {% else %}
+                <div class="alert alert-primary">
+                    <i class="fas fa-crown me-2"></i>
+                    Вы являетесь автором этого проекта
+                    <div class="mt-2">
+                        <a href="{{ url_for('project_applications', project_id=project.id) }}"
+                           class="btn btn-outline-primary btn-sm">
+                            Просмотреть заявки
+                        </a>
+                        <a href="{{ url_for('edit_project', project_id=project.id) }}"
+                           class="btn btn-outline-secondary btn-sm">
+                            Редактировать
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            {% else %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Войдите для участия</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p>Чтобы подать заявку на проект, необходимо войти в систему</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-sign-in-alt me-2"></i>Войти
+                    </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-plus me-2"></i>Регистрация
+                    </a>
                 </div>
             </div>
             {% endif %}
 
-            <!-- Быстрые действия -->
-            <div class="card mb-4">
+            <!-- Действия -->
+            {% if current_user.is_authenticated and project.creator_id == current_user.id %}
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Управление проектом</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Быстрые действия</h5>
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('create_project') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-plus-circle"></i> Создать свой проект
+                        <a href="{{ url_for('edit_project', project_id=project.id) }}"
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-2"></i>Редактировать проект
                         </a>
-                        <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-search"></i> Найти другие проекты
+
+                        <a href="{{ url_for('project_applications', project_id=project.id) }}"
+                           class="btn btn-outline-success">
+                            <i class="fas fa-list-alt me-2"></i>Просмотреть заявки
                         </a>
-                        {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('profile') }}" class="btn btn-outline-info">
-                            <i class="fas fa-user"></i> Мой профиль
-                        </a>
-                        {% endif %}
+
+                        <button type="button" class="btn btn-outline-danger"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash me-2"></i>Удалить проект
+                        </button>
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -214,8 +274,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Вы уверены, что хотите удалить проект "{{ project.title }}"?</p>
-                <p class="text-danger"><strong>Это действие нельзя отменить!</strong></p>
+                <p>Вы уверены, что хотите удалить проект <strong>"{{ project.title }}"</strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Это действие нельзя отменить!</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
@@ -227,34 +287,4 @@
     </div>
 </div>
 {% endif %}
-
-<script>
-// JavaScript для отображения выбранной роли
-document.addEventListener('DOMContentLoaded', function() {
-    const applyButtons = document.querySelectorAll('[data-role]');
-    const roleSelect = document.getElementById('role');
-
-    if (applyButtons && roleSelect) {
-        applyButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const role = this.getAttribute('data-role');
-                roleSelect.value = role;
-
-                // Прокрутка к форме
-                document.getElementById('message').focus();
-            });
-        });
-    }
-
-    // Подтверждение удаления
-    const deleteForms = document.querySelectorAll('form[action*="delete"]');
-    deleteForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            if (!confirm('Вы уверены, что хотите удалить этот проект?')) {
-                e.preventDefault();
-            }
-        });
-    });
-});
-</script>
 {% endblock %}
