@@ -47,5 +47,3 @@ class Application(db.Model):
     status = db.Column(db.String(50), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    project = db.relationship('Project', backref='applications')
-    user = db.relationship('User', backref='user_applications')
