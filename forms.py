@@ -16,7 +16,7 @@ class RegisterForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Пароль', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Повторите пароль',
-                                     validators=[DataRequired(), EqualTo('password')])
+                                     validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])  # ИСПРАВЛЕНО
     full_name = StringField('ФИО', validators=[DataRequired()])
     university = StringField('ВУЗ', validators=[DataRequired()])
     faculty = StringField('Факультет', validators=[DataRequired()])
@@ -36,6 +36,8 @@ class RegisterForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError('Этот email уже зарегистрирован')
+
+
 class ProjectForm(FlaskForm):
     title = StringField('Название проекта', validators=[DataRequired()])
     description = TextAreaField('Описание', validators=[DataRequired()])
@@ -62,40 +64,13 @@ class ProjectForm(FlaskForm):
     faculty_filter = StringField('Предпочтительный факультет')
     estimated_duration = StringField('Примерная длительность')
     submit = SubmitField('Создать проект')
-# В конец forms.py добавьте:
 
-class ProjectForm(FlaskForm):
-    title = StringField('Название проекта', validators=[DataRequired()])
-    description = TextAreaField('Описание', validators=[DataRequired()])
-    category = SelectField('Категория', choices=[
-        ('it', 'IT и Разработка'),
-        ('business', 'Бизнес и Стартапы'),
-        ('design', 'Дизайн и Креатив'),
-        ('science', 'Наука и Исследования'),
-        ('social', 'Социальные проекты'),
-        ('other', 'Другое')
-    ])
-    needed_roles = TextAreaField('Требуемые роли (каждая с новой строки: "роль:уровень")',
-                                 validators=[DataRequired()])
-    difficulty = SelectField('Сложность', choices=[
-        ('beginner', 'Для начинающих'),
-        ('intermediate', 'Средний уровень'),
-        ('advanced', 'Продвинутый')
-    ])
-    location_type = SelectField('Формат работы', choices=[
-        ('online', 'Онлайн'),
-        ('offline', 'Очно'),
-        ('hybrid', 'Гибрид')
-    ])
-    university_filter = StringField('Предпочтительный ВУЗ (оставьте пустым для всех)')
-    faculty_filter = StringField('Предпочтительный факультет')
-    estimated_duration = StringField('Примерная длительность')
-    submit = SubmitField('Создать проект')
 
 class ApplicationForm(FlaskForm):
     applied_role = SelectField('На какую роль вы претендуете?', choices=[])
     message = TextAreaField('Расскажите о себе', validators=[DataRequired()])
     submit = SubmitField('Подать заявку')
+
 
 class EditProfileForm(FlaskForm):
     full_name = StringField('ФИО', validators=[DataRequired()])
