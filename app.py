@@ -34,7 +34,14 @@ def create_app():
 
     @app.route('/')
     def index():
-        return render_template('index.html', current_user=current_user)
+        from database import Project, User
+        projects = Project.query.filter_by(status='active').order_by(Project.created_at.desc()).limit(6).all()
+        stats = {
+            'projects': Project.query.count(),
+            'users': User.query.count(),
+            'universities': db.session.query(User.university).distinct().count()
+        }
+        return render_template('index.html', projects=projects, stats=stats, current_user=current_user)
 
     @app.route('/health')
     def health():
