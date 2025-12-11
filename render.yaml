@@ -1,34 +1,28 @@
+databases:
+  - name: colabhubdb
+    plan: free
+    databaseName: colabhub
+    user: colabhub_user
+
 services:
   - type: web
     name: colab-hub
     env: python
-    region: frankfurt  # или ohio, oregon - выберите ближайший
+    region: frankfurt
     plan: free
     pythonVersion: "3.11.0"
-
-    # Сборка
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-
-    # Запуск
     startCommand: gunicorn app:app
-
-    # Переменные окружения
     envVars:
       - key: SECRET_KEY
-        generateValue: true  # Render сам сгенерирует ключ
+        generateValue: true
       - key: FLASK_APP
         value: app.py
-      - key: FLASK_ENV
-        value: production
-      - key: PYTHON_VERSION
-        value: 3.11.0
-
-    # Авто-деплой
-    autoDeploy: true
-    branch: main  # Можно указать, но не обязательно
-
-    # Health check (проверка работоспособности)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: colabhubdb
+          property: connectionString
     healthCheckPath: /health
-    initialDelaySec: 30
+    autoDeploy: true
