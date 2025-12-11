@@ -4,7 +4,25 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, SelectField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, Length
 
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Пароль', validators=[DataRequired()])
+    submit = SubmitField('Войти')
+
+class RegisterForm(FlaskForm):
+    username = StringField('Логин', validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Пароль', validators=[DataRequired(), Length(min=6)])
+    full_name = StringField('ФИО', validators=[DataRequired()])
+    university = StringField('ВУЗ', validators=[DataRequired()])
+    faculty = StringField('Факультет', validators=[DataRequired()])
+    course = SelectField('Курс', choices=[(str(i), str(i)) for i in range(1, 7)])
+    skills = StringField('Навыки')
+    submit = SubmitField('Зарегистрироваться')
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -104,6 +122,69 @@ def create_app():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    # После базовых маршрутов добавьте:
+
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for('index'))
+
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(email=form.email.data).first()
+            if user and check_password_hash(user.password_hash, form.password.data):
+                login_user(user)
+                flash('Вход выполнен успешно!', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Неверный email или пароль', 'danger')
+
+        return render_template('login.html', form=form)
+
+    @app.route('/register', methods=['GET', 'POST'])
+    def register():
+        if current_user.is_authenticated:
+            return redirect(url_for('index'))
+
+        form = RegisterForm()
+        if form.validate_on_submit():
+            existing_user = User.query.filter(
+                (User.email == form.email.data) | (User.username == form.username.data)
+            ).first()
+
+            if existing_user:
+                flash('Пользователь с таким email или логином уже существует', 'danger')
+                return redirect(url_for('register'))
+
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                password_hash=generate_password_hash(form.password.data),
+                full_name=form.full_name.data,
+                university=form.university.data,
+                faculty=form.faculty.data,
+                course=int(form.course.data),
+                skills=form.skills.data
+            )
+
+            db.session.add(user)
+            db.session.commit()
+            flash('Регистрация успешна! Теперь войдите.', 'success')
+            return redirect(url_for('login'))
+
+        return render_template('register.html', form=form)
+
+    @app.route('/logout')
+    @login_required
+    def logout():
+        logout_user()
+        flash('Вы вышли из системы', 'info')
+        return redirect(url_for('index'))
+
+    @app.route('/projects')
+    def projects():
+        projects = Project.query.filter_by(status='active').order_by(Project.created_at.desc()).all()
+        return render_template('projects.html', projects=projects)
     # Создаем таблицы при запуске
     with app.app_context():
         db.create_all()
