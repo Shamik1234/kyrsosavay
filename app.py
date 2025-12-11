@@ -346,49 +346,6 @@ def create_app():
 
         db.session.commit()
         return redirect(url_for('project_applications', project_id=project.id))
-    @app.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
-    @login_required
-    def edit_project(project_id):
-        from database import Project
-        from forms import ProjectForm
-
-        project = Project.query.get_or_404(project_id)
-
-        # Проверяем, что текущий пользователь - создатель проекта
-        if project.creator_id != current_user.id:
-            flash('У вас нет прав редактировать этот проект', 'danger')
-            return redirect(url_for('project_detail', project_id=project_id))
-
-        form = ProjectForm()
-
-        if form.validate_on_submit():
-            project.title = form.title.data
-            project.description = form.description.data
-            project.category = form.category.data
-            project.needed_roles = form.needed_roles.data
-            project.difficulty = form.difficulty.data
-            project.location_type = form.location_type.data
-            project.university_filter = form.university_filter.data
-            project.faculty_filter = form.faculty_filter.data
-            project.estimated_duration = form.estimated_duration.data
-
-            db.session.commit()
-            flash('Проект успешно обновлен!', 'success')
-            return redirect(url_for('project_detail', project_id=project.id))
-
-        # Заполняем форму текущими данными
-        if request.method == 'GET':
-            form.title.data = project.title
-            form.description.data = project.description
-            form.category.data = project.category
-            form.needed_roles.data = project.needed_roles
-            form.difficulty.data = project.difficulty
-            form.location_type.data = project.location_type
-            form.university_filter.data = project.university_filter
-            form.faculty_filter.data = project.faculty_filter
-            form.estimated_duration.data = project.estimated_duration
-
-        return render_template('edit_project.html', form=form, project=project)
 
     @app.route('/project/<int:project_id>/delete', methods=['POST'])
     @login_required
