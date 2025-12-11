@@ -189,6 +189,163 @@ def create_app():
 
         return render_template('create_project.html', form=form)
 
+    # ---------- РЕДАКТИРОВАНИЕ И УДАЛЕНИЕ ПРОЕКТОВ ----------
+
+    @app.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
+    @login_required
+    def edit_project(project_id):
+        project = Project.query.get_or_404(project_id)
+
+        # Проверяем, что текущий пользователь - создатель проекта
+        if project.creator_id != current_user.id:
+            flash('У вас нет прав редактировать этот проект', 'danger')
+            return redirect(url_for('project_detail', project_id=project_id))
+
+        form = ProjectForm()
+
+        if form.validate_on_submit():
+            project.title = form.title.data
+            project.description = form.description.data
+            project.category = form.category.data
+            project.needed_roles = form.needed_roles.data
+            project.difficulty = form.difficulty.data
+            project.location_type = form.location_type.data
+            project.university_filter = form.university_filter.data
+            project.faculty_filter = form.faculty_filter.data
+            project.estimated_duration = form.estimated_duration.data
+
+            db.session.commit()
+            flash('Проект успешно обновлен!', 'success')
+            return redirect(url_for('project_detail', project_id=project.id))
+
+        # Заполняем форму текущими данными
+        if request.method == 'GET':
+            form.title.data = project.title
+            form.description.data = project.description
+            form.category.data = project.category
+            form.needed_roles.data = project.needed_roles
+            form.difficulty.data = project.difficulty
+            form.location_type.data = project.location_type
+            form.university_filter.data = project.university_filter
+            form.faculty_filter.data = project.faculty_filter
+            form.estimated_duration.data = project.estimated_duration
+
+        return render_template('edit_project.html', form=form, project=project)
+
+    @app.route('/project/<int:project_id>/delete', methods=['POST'])
+    @login_required
+    def delete_project(project_id):
+        project = Project.query.get_or_404(project_id)
+
+        # Проверяем, что текущий пользователь - создатель проекта
+        if project.creator_id != current_user.id:
+            flash('У вас нет прав удалить этот проект', 'danger')
+            return redirect(url_for('index'))
+
+        # Удаляем все связанные заявки
+        Application.query.filter_by(project_id=project_id).delete()
+
+        # Удаляем проект
+        db.session.delete(project)
+        db.session.commit()
+
+        flash('Проект успешно удален', 'success')
+        return redirect(url_for('profile'))
+
+    # ---------- ЗАЯВКИ НА ПРОЕКТЫ ----------
+
+    @app.route('/project/<int:project_id>/apply', methods=['POST'])
+    @login_required
+    def apply_to_project(project_id):
+        project = Project.query.get_or_404(project_id)
+
+        # Нельзя подавать заявку на свой проект
+        if project.creator_id == current_user.id:
+            flash('Вы не можете подать заявку на свой проект', 'warning')
+            return redirect(url_for('project_detail', project_id=project_id))
+
+        # Проверяем, не подал ли уже заявку
+        existing = Application.query.filter_by(
+            project_id=project_id,
+            user_id=current_user.id
+        ).first()
+
+        if existing:
+            flash('Вы уже подали заявку на этот проект', 'warning')
+            return redirect(url_for('project_detail', project_id=project_id))
+
+        role = request.form.get('role')
+        message = request.form.get('message')
+
+        application = Application(
+            project_id=project_id,
+            user_id=current_user.id,
+            applied_role=role,
+            message=message
+        )
+
+        db.session.add(application)
+        db.session.commit()
+
+        flash('Заявка успешно отправлена!', 'success')
+        return redirect(url_for('project_detail', project_id=project_id))
+
+    @app.route('/application/<int:app_id>/cancel', methods=['POST'])
+    @login_required
+    def cancel_application(app_id):
+        application = Application.query.get_or_404(app_id)
+
+        # Проверяем, что текущий пользователь - автор заявки
+        if application.user_id != current_user.id:
+            flash('У вас нет прав отменить эту заявку', 'danger')
+            return redirect(url_for('profile'))
+
+        db.session.delete(application)
+        db.session.commit()
+
+        flash('Заявка успешно отменена', 'success')
+        return redirect(url_for('profile'))
+
+    # ---------- УПРАВЛЕНИЕ ЗАЯВКАМИ (для создателей проектов) ----------
+
+    @app.route('/project/<int:project_id>/applications')
+    @login_required
+    def project_applications(project_id):
+        project = Project.query.get_or_404(project_id)
+
+        # Проверяем, что текущий пользователь - создатель проекта
+        if project.creator_id != current_user.id:
+            flash('У вас нет прав просматривать заявки на этот проект', 'danger')
+            return redirect(url_for('project_detail', project_id=project_id))
+
+        applications = Application.query.filter_by(project_id=project_id).all()
+        return render_template('project_applications.html',
+                               project=project,
+                               applications=applications,
+                               current_user=current_user)
+
+    @app.route('/application/<int:app_id>/<action>')
+    @login_required
+    def handle_application(app_id, action):
+        application = Application.query.get_or_404(app_id)
+        project = Project.query.get_or_404(application.project_id)
+
+        # Проверяем, что текущий пользователь - создатель проекта
+        if project.creator_id != current_user.id:
+            flash('У вас нет прав для этого действия', 'danger')
+            return redirect(url_for('project_detail', project_id=project.id))
+
+        if action == 'accept':
+            application.status = 'accepted'
+            flash(f'Заявка от {application.applicant.username} принята!', 'success')
+        elif action == 'reject':
+            application.status = 'rejected'
+            flash(f'Заявка от {application.applicant.username} отклонена', 'info')
+        else:
+            flash('Неизвестное действие', 'danger')
+
+        db.session.commit()
+        return redirect(url_for('project_applications', project_id=project.id))
     @app.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
     @login_required
     def edit_project(project_id):
