@@ -595,7 +595,7 @@ def chats():
     # Сортируем по времени последнего сообщения
     all_chats.sort(key=lambda x: x['last_message_time'], reverse=True)
 
-    return render_template('chats.html',
+    return render_template('Сhats.html',
                            chats=all_chats,
                            current_user=current_user)
 
