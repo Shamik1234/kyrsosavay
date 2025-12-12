@@ -636,33 +636,6 @@ def chats():
                            current_user=current_user)
 
 
-@app.route('/chat/<int:application_id>')
-@login_required
-def chat(application_id):
-    application = Application.query.get_or_404(application_id)
-
-    # Проверяем доступ
-    if application.user_id != current_user.id and application.project.creator_id != current_user.id:
-        flash('У вас нет доступа к этому чату', 'danger')
-        return redirect(url_for('chats'))
-
-    # Определяем собеседника
-    if current_user.id == application.user_id:
-        # Вы - соискатель, собеседник - создатель проекта
-        interlocutor = application.project.creator
-        chat_type = 'applicant'
-    else:
-        # Вы - создатель проекта, собеседник - соискатель
-        interlocutor = application.user
-        chat_type = 'creator'
-
-    return render_template('chat.html',
-                           application=application,
-                           project=application.project,
-                           interlocutor=interlocutor,
-                           chat_type=chat_type,
-                           current_user=current_user)
-
 
 # ---------- ОБРАБОТЧИКИ ОШИБОК ----------
 
