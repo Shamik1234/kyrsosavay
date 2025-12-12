@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Студенты - Colab Hub{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4"><i class="fas fa-user-graduate me-3"></i>Студенты</h1>
+    
+    <!-- Поиск и фильтры -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('students') }}" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Поиск по имени, логину или навыкам..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="university">
+                        <option value="">Все ВУЗы</option>
+                        {% for uni in universities %}
+                        <option value="{{ uni }}" {% if request.args.get('university') == uni %}selected{% endif %}>
+                            {{ uni }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="skill">
+                        <option value="">Все навыки</option>
+                        {% for skill in skills %}
+                        <option value="{{ skill }}" {% if request.args.get('skill') == skill %}selected{% endif %}>
+                            {{ skill }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Найти</button>
+                    <a href="{{ url_for('students') }}" class="btn btn-outline-secondary">Сбросить</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Список студентов -->
+    {% if students %}
+    <div class="row">
+        {% for student in students %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-placeholder bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                             style="width: 50px; height: 50px; font-size: 1.2rem;">
+                            {{ student.username[0]|upper }}
+                        </div>
+                        <div>
+                            <h5 class="card-title mb-0">{{ student.username }}</h5>
+                            <p class="card-text text-muted small mb-0">
+                                {{ student.full_name or 'Имя не указано' }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if student.university %}
+                    <p class="card-text">
+                        <i class="fas fa-university me-2 text-muted"></i>
+                        {{ student.university }}
+                    </p>
+                    {% endif %}
+                    
+                    {% if student.faculty %}
+                    <p class="card-text">
+                        <i class="fas fa-graduation-cap me-2 text-muted"></i>
+                        {{ student.faculty }}
+                        {% if student.course %}
+                        <span class="badge bg-info ms-2">{{ student.course }} курс</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    
+                    {% if student.skills %}
+                    <div class="mb-2">
+                        <small class="text-muted d-block mb-1">Навыки:</small>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for skill in student.skills.split(',') %}
+                            {% if skill.strip() %}
+                            <span class="badge bg-light text-dark border">{{ skill.strip() }}</span>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="far fa-calendar me-1"></i>
+                            Зарегистрирован: {{ student.created_at.strftime('%d.%m.%Y') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <h4><i class="fas fa-info-circle me-2"></i>Студенты не найдены</h4>
+        <p>Попробуйте изменить параметры поиска.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
