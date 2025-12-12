@@ -1,8 +1,8 @@
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required, current_user, Message
+from flask_login import login_user, logout_user, login_required, current_user
 import os
 from datetime import datetime
-from database import db, login_manager, User, Project, Application
+from database import db, login_manager, User, Project, Application, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import LoginForm, RegisterForm, ProjectForm, EditProfileForm
 
