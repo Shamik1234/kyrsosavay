@@ -63,3 +63,29 @@ class Message(db.Model):
 
     application = db.relationship('Application', backref='messages')
     sender = db.relationship('User', foreign_keys=[sender_id])
+
+
+# После класса Application добавьте:
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    application_id = db.Column(db.Integer, db.ForeignKey('application.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False)
+
+    # Отношения
+    application = db.relationship('Application', backref='messages')
+    sender = db.relationship('User', foreign_keys=[sender_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'sender_name': self.sender.username,
+            'content': self.content,
+            'created_at': self.created_at.strftime('%H:%M %d.%m.%Y'),
+            'is_read': self.is_read,
+            'is_my_message': False  # Заполняется в коде
+        }

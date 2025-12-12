@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required, current_user
+from flask_login import login_user, logout_user, login_required, current_user, Message
 import os
 from datetime import datetime
 from database import db, login_manager, User, Project, Application
@@ -675,6 +675,225 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
+
+# ---------- ДИАЛОГИ / ЧАТЫ ----------
+
+@app.route('/chats')
+@login_required
+def chats():
+    # Получаем все заявки пользователя (как соискателя)
+    user_applications = Application.query.filter_by(user_id=current_user.id).all()
+
+    # Получаем все проекты пользователя (как создателя)
+    user_projects = Project.query.filter_by(creator_id=current_user.id).all()
+
+    all_chats = []
+
+    # 1. Чаты где вы соискатель
+    for app in user_applications:
+        if app.project:
+            # Получаем последнее сообщение
+            last_message = Message.query.filter_by(application_id=app.id) \
+                .order_by(Message.created_at.desc()).first()
+
+            # Считаем непрочитанные сообщения
+            unread_count = Message.query.filter_by(
+                application_id=app.id,
+                is_read=False
+            ).filter(Message.sender_id != current_user.id).count()
+
+            all_chats.append({
+                'id': app.id,
+                'type': 'applicant',
+                'project': app.project,
+                'application': app,
+                'interlocutor': app.project.creator,
+                'last_message': last_message.content if last_message else "Нет сообщений",
+                'last_message_time': last_message.created_at if last_message else app.created_at,
+                'unread_count': unread_count
+            })
+
+    # 2. Чаты где вы создатель проекта
+    for project in user_projects:
+        applications = Application.query.filter_by(project_id=project.id).all()
+        for app in applications:
+            # Получаем последнее сообщение
+            last_message = Message.query.filter_by(application_id=app.id) \
+                .order_by(Message.created_at.desc()).first()
+
+            # Считаем непрочитанные сообщения
+            unread_count = Message.query.filter_by(
+                application_id=app.id,
+                is_read=False
+            ).filter(Message.sender_id != current_user.id).count()
+
+            all_chats.append({
+                'id': app.id,
+                'type': 'creator',
+                'project': project,
+                'application': app,
+                'interlocutor': app.user,
+                'last_message': last_message.content if last_message else "Нет сообщений",
+                'last_message_time': last_message.created_at if last_message else app.created_at,
+                'unread_count': unread_count
+            })
+
+    # Сортируем по времени последнего сообщения
+    all_chats.sort(key=lambda x: x['last_message_time'], reverse=True)
+
+    return render_template('chats.html',
+                           chats=all_chats,
+                           current_user=current_user)
+
+
+@app.route('/chat/<int:application_id>')
+@login_required
+def chat(application_id):
+    application = Application.query.get_or_404(application_id)
+    project = application.project
+
+    # Проверяем доступ: только участники заявки могут видеть чат
+    if application.user_id != current_user.id and project.creator_id != current_user.id:
+        flash('У вас нет доступа к этому чату', 'danger')
+        return redirect(url_for('chats'))
+
+    # Помечаем сообщения как прочитанные
+    Message.query.filter_by(
+        application_id=application_id,
+        is_read=False
+    ).filter(Message.sender_id != current_user.id).update({'is_read': True})
+    db.session.commit()
+
+    # Определяем собеседника
+    if current_user.id == application.user_id:
+        interlocutor = project.creator  # Вы - соискатель
+        chat_type = 'applicant'
+    else:
+        interlocutor = application.user  # Вы - создатель проекта
+        chat_type = 'creator'
+
+    # Получаем историю сообщений
+    messages = Message.query.filter_by(application_id=application_id) \
+        .order_by(Message.created_at.asc()).all()
+
+    # Преобразуем в словари
+    messages_data = []
+    for msg in messages:
+        msg_dict = msg.to_dict()
+        msg_dict['is_my_message'] = (msg.sender_id == current_user.id)
+        messages_data.append(msg_dict)
+
+    return render_template('chat.html',
+                           application=application,
+                           project=project,
+                           interlocutor=interlocutor,
+                           messages=messages_data,
+                           chat_type=chat_type,
+                           current_user=current_user)
+
+
+@app.route('/chat/<int:application_id>/send', methods=['POST'])
+@login_required
+def send_message(application_id):
+    application = Application.query.get_or_404(application_id)
+
+    # Проверяем доступ
+    if application.user_id != current_user.id and application.project.creator_id != current_user.id:
+        return jsonify({'error': 'Нет доступа'}), 403
+
+    content = request.form.get('message', '').strip()
+
+    if not content:
+        return jsonify({'error': 'Сообщение не может быть пустым'}), 400
+
+    if len(content) > 1000:
+        return jsonify({'error': 'Сообщение слишком длинное'}), 400
+
+    # Создаем сообщение
+    message = Message(
+        application_id=application_id,
+        sender_id=current_user.id,
+        content=content
+    )
+
+    db.session.add(message)
+    db.session.commit()
+
+    # Обновляем статус заявки (если нужно)
+    if application.status == 'pending':
+        application.status = 'in_dialog'
+        db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message_id': message.id,
+        'sender_name': current_user.username,
+        'content': content,
+        'created_at': message.created_at.strftime('%H:%M')
+    })
+
+
+@app.route('/chat/<int:application_id>/messages')
+@login_required
+def get_messages(application_id):
+    application = Application.query.get_or_404(application_id)
+
+    # Проверяем доступ
+    if application.user_id != current_user.id and application.project.creator_id != current_user.id:
+        return jsonify({'error': 'Нет доступа'}), 403
+
+    # Получаем сообщения после определенного ID (для AJAX)
+    last_id = request.args.get('last_id', 0, type=int)
+
+    messages = Message.query.filter_by(application_id=application_id) \
+        .filter(Message.id > last_id) \
+        .order_by(Message.created_at.asc()).all()
+
+    # Помечаем как прочитанные
+    for msg in messages:
+        if msg.sender_id != current_user.id and not msg.is_read:
+            msg.is_read = True
+
+    db.session.commit()
+
+    # Преобразуем в JSON
+    messages_data = []
+    for msg in messages:
+        msg_dict = msg.to_dict()
+        msg_dict['is_my_message'] = (msg.sender_id == current_user.id)
+        messages_data.append(msg_dict)
+
+    return jsonify({'messages': messages_data})
+
+
+@app.route('/chat/unread_count')
+@login_required
+def unread_messages_count():
+    # Считаем непрочитанные сообщения во всех чатах пользователя
+
+    # 1. В заявках где вы соискатель
+    user_applications = Application.query.filter_by(user_id=current_user.id).all()
+    total_unread = 0
+
+    for app in user_applications:
+        unread = Message.query.filter_by(
+            application_id=app.id,
+            is_read=False
+        ).filter(Message.sender_id != current_user.id).count()
+        total_unread += unread
+
+    # 2. В заявках где вы создатель проекта
+    user_projects = Project.query.filter_by(creator_id=current_user.id).all()
+    for project in user_projects:
+        applications = Application.query.filter_by(project_id=project.id).all()
+        for app in applications:
+            unread = Message.query.filter_by(
+                application_id=app.id,
+                is_read=False
+            ).filter(Message.sender_id != current_user.id).count()
+            total_unread += unread
+
+    return jsonify({'unread_count': total_unread})
 
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 

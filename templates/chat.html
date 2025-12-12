@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Диалог - {{ project.title }} - Colab Hub{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Боковая панель с информацией -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Информация</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Проект:</h6>
+                    <p><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a></p>
+                    
+                    <h6>Собеседник:</h6>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-placeholder bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                             style="width: 40px; height: 40px;">
+                            {{ interlocutor.username[0]|upper }}
+                        </div>
+                        <div>
+                            <strong>{{ interlocutor.username }}</strong><br>
+                            <small class="text-muted">{{ interlocutor.university or 'ВУЗ не указан' }}</small>
+                        </div>
+                    </div>
+                    
+                    <h6>Статус заявки:</h6>
+                    <span class="badge {% if application.status == 'accepted' %}bg-success
+                                     {% elif application.status == 'rejected' %}bg-danger
+                                     {% elif application.status == 'in_dialog' %}bg-info
+                                     {% else %}bg-warning{% endif %}">
+                        {% if application.status == 'accepted' %}Принята
+                        {% elif application.status == 'rejected' %}Отклонена
+                        {% elif application.status == 'in_dialog' %}В диалоге
+                        {% else %}На рассмотрении{% endif %}
+                    </span>
+                    
+                    {% if chat_type == 'creator' %}
+                    <div class="mt-3">
+                        <h6>Роль соискателя:</h6>
+                        <p>{{ application.applied_role }}</p>
+                        
+                        <h6>Изначальное сообщение:</h6>
+                        <div class="border rounded p-2 bg-light">
+                            {{ application.message|replace('\n', '<br>'|safe) }}
+                        </div>
+                        
+                        {% if application.status == 'pending' or application.status == 'in_dialog' %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('handle_application', app_id=application.id, action='accept') }}" 
+                               class="btn btn-success btn-sm me-2">
+                                <i class="fas fa-check me-1"></i>Принять
+                            </a>
+                            <a href="{{ url_for('handle_application', app_id=application.id, action='reject') }}" 
+                               class="btn btn-danger btn-sm">
+                                <i class="fas fa-times me-1"></i>Отклонить
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card shadow mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Ваша роль</h6>
+                </div>
+                <div class="card-body">
+                    {% if chat_type == 'applicant' %}
+                    <p class="mb-2"><i class="fas fa-user-tie me-2"></i>Вы: <strong>Соискатель</strong></p>
+                    <p class="small text-muted mb-0">Вы подали заявку на роль: <strong>{{ application.applied_role }}</strong></p>
+                    {% else %}
+                    <p class="mb-2"><i class="fas fa-crown me-2"></i>Вы: <strong>Создатель проекта</strong></p>
+                    <p class="small text-muted mb-0">Вы рассматриваете заявку от <strong>{{ interlocutor.username }}</strong></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Основной чат -->
+        <div class="col-lg-8">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Диалог
+                    </h5>
+                    <button class="btn btn-light btn-sm" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                
+                <!-- Сообщения -->
+                <div class="card-body p-3" id="messagesContainer" 
+                     style="height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                    {% if messages %}
+                        {% for msg in messages %}
+                        <div class="message mb-3 {% if msg.is_my_message %}text-end{% endif %}">
+                            <div class="d-flex {% if msg.is_my_message %}justify-content-end{% endif %}">
+                                <div class="message-content {% if msg.is_my_message %}bg-primary text-white{% else %}bg-white border{% endif %} 
+                                            rounded p-3" style="max-width: 70%;">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <small class="{% if msg.is_my_message %}text-white-50{% else %}text-muted{% endif %}">
+                                            <strong>{{ msg.sender_name }}</strong>
+                                            {% if msg.is_my_message %} (Вы){% endif %}
+                                        </small>
+                                        <small class="{% if msg.is_my_message %}text-white-50{% else %}text-muted{% endif %} ms-2">
+                                            {{ msg.created_at }}
+                                        </small>
+                                    </div>
+                                    <p class="mb-0">{{ msg.content|replace('\n', '<br>'|safe) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted my-5">
+                        <i class="fas fa-comments fa-3x mb-3"></i>
+                        <h5>Диалог пуст</h5>
+                        <p>Начните общение первым!</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Форма отправки -->
+                <div class="card-footer">
+                    <form id="messageForm">
+                        <div class="input-group">
+                            <textarea class="form-control" id="messageInput" 
+                                      placeholder="Введите сообщение..." rows="2" 
+                                      style="resize: none;"></textarea>
+                            <button class="btn btn-success" type="submit" id="sendButton">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted mt-1 d-block">
+                            Нажмите Enter для отправки, Shift+Enter для новой строки
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const applicationId = {{ application.id }};
+let lastMessageId = {{ messages[-1].id if messages else 0 }};
+
+// Автопрокрутка вниз
+function scrollToBottom() {
+    const container = document.getElementById('messagesContainer');
+    container.scrollTop = container.scrollHeight;
+}
+
+// Загрузка новых сообщений
+function loadNewMessages() {
+    fetch(`/chat/${applicationId}/messages?last_id=${lastMessageId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages && data.messages.length > 0) {
+                const container = document.getElementById('messagesContainer');
+                
+                data.messages.forEach(msg => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message mb-3 ${msg.is_my_message ? 'text-end' : ''}`;
+                    
+                    const alignClass = msg.is_my_message ? 'justify-content-end' : '';
+                    const bgClass = msg.is_my_message ? 'bg-primary text-white' : 'bg-white border';
+                    
+                    messageDiv.innerHTML = `
+                        <div class="d-flex ${alignClass}">
+                            <div class="message-content ${bgClass} rounded p-3" style="max-width: 70%;">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <small class="${msg.is_my_message ? 'text-white-50' : 'text-muted'}">
+                                        <strong>${msg.sender_name}</strong>
+                                        ${msg.is_my_message ? ' (Вы)' : ''}
+                                    </small>
+                                    <small class="${msg.is_my_message ? 'text-white-50' : 'text-muted'} ms-2">
+                                        ${msg.created_at}
+                                    </small>
+                                </div>
+                                <p class="mb-0">${msg.content.replace(/\n/g, '<br>')}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                    lastMessageId = msg.id;
+                });
+                
+                scrollToBottom();
+            }
+        })
+        .catch(error => console.error('Ошибка загрузки сообщений:', error));
+}
+
+// Отправка сообщения
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    const sendButton = document.getElementById('sendButton');
+    sendButton.disabled = true;
+    sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    const formData = new FormData();
+    formData.append('message', message);
+    
+    fetch(`/chat/${applicationId}/send`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageInput.value = '';
+            loadNewMessages(); // Загружаем новое сообщение
+        } else {
+            alert(data.error || 'Ошибка отправки');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        alert('Ошибка сети');
+    })
+    .finally(() => {
+        sendButton.disabled = false;
+        sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    });
+});
+
+// Обработка Enter (отправка) и Shift+Enter (новая строка)
+document.getElementById('messageInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('messageForm').dispatchEvent(new Event('submit'));
+    }
+});
+
+// Периодическая проверка новых сообщений (каждые 3 секунды)
+setInterval(loadNewMessages, 3000);
+
+// При загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    scrollToBottom();
+    // Первая проверка через 1 секунду
+    setTimeout(loadNewMessages, 1000);
+});
+</script>
+
+<style>
+.message-content {
+    word-wrap: break-word;
+    word-break: break-word;
+}
+#messagesContainer {
+    scroll-behavior: smooth;
+}
+</style>
+{% endblock %}
