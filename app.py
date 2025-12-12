@@ -76,13 +76,6 @@ def register():
 
     form = RegisterForm()
 
-    # Диагностика
-    if request.method == 'POST':
-        print(f"=== ДАННЫЕ РЕГИСТРАЦИИ ===")
-        print(f"Пароль: {request.form.get('password', 'НЕ ПЕРЕДАН')}")
-        print(f"Подтверждение: {request.form.get('confirm_password', 'НЕ ПЕРЕДАН')}")
-        print(f"Ошибки формы: {form.errors}")
-
     if form.validate_on_submit():
         existing_user = User.query.filter(
             (User.email == form.email.data) | (User.username == form.username.data)
@@ -109,7 +102,6 @@ def register():
         flash('Регистрация успешна! Теперь войдите в систему.', 'success')
         return redirect(url_for('login'))
 
-    # Показываем ошибки валидации
     for field, errors in form.errors.items():
         for error in errors:
             flash(f"Ошибка в поле '{field}': {error}", 'danger')
@@ -161,10 +153,8 @@ def students():
 
     students = query.order_by(User.created_at.desc()).all()
 
-    # Получаем уникальные вузы для фильтра
     universities = db.session.query(User.university).distinct().all()
 
-    # Собираем уникальные навыки
     all_skills = set()
     for student in User.query.all():
         if student.skills:
@@ -199,10 +189,8 @@ def projects():
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
 
-    # Парсим needed_roles в удобный формат для шаблона
     needed_roles = []
     if project.needed_roles:
-        # Удаляем лишние пробелы и разбиваем по строкам
         lines = project.needed_roles.strip().split('\n')
 
         for line in lines:
@@ -211,23 +199,20 @@ def project_detail(project_id):
                 continue
 
             if ':' in line:
-                # Формат: "роль:уровень"
                 parts = line.split(':', 1)
                 role_name = parts[0].strip()
                 level = parts[1].strip() if len(parts) > 1 else 'любой'
             else:
-                # Формат: просто "роль"
                 role_name = line
                 level = 'любой'
 
-            if role_name:  # Проверяем, что роль не пустая
+            if role_name:
                 needed_roles.append({
                     'role': role_name,
                     'level': level,
                     'full': f"{role_name} ({level})"
                 })
 
-    # Если роли не распарсились, пробуем через запятую
     if not needed_roles and project.needed_roles:
         roles_list = [r.strip() for r in project.needed_roles.split(',') if r.strip()]
         for role_name in roles_list:
@@ -237,7 +222,6 @@ def project_detail(project_id):
                 'full': role_name
             })
 
-    # Проверяем, подал ли пользователь заявку
     has_applied = False
     application_id = None
     if current_user.is_authenticated:
@@ -262,17 +246,14 @@ def project_detail(project_id):
 def create_project():
     form = ProjectForm()
     if form.validate_on_submit():
-        # Обработка ролей
         roles_text = ""
         if hasattr(form.needed_roles, 'data') and form.needed_roles.data:
             if isinstance(form.needed_roles.data, list):
-                # Если это список из SelectMultipleField
                 for role in form.needed_roles.data:
                     roles_text += f"{role}:средний\n"
             else:
-                # Если это текст из TextAreaField
                 roles_text = form.needed_roles.data
-        elif form.needed_roles.data:  # Для обратной совместимости
+        elif form.needed_roles.data:
             roles_text = form.needed_roles.data
 
         project = Project(
@@ -302,7 +283,6 @@ def create_project():
 def edit_project(project_id):
     project = Project.query.get_or_404(project_id)
 
-    # Проверяем, что текущий пользователь - создатель проекта
     if project.creator_id != current_user.id:
         flash('У вас нет прав редактировать этот проект', 'danger')
         return redirect(url_for('project_detail', project_id=project_id))
@@ -310,7 +290,6 @@ def edit_project(project_id):
     form = ProjectForm()
 
     if form.validate_on_submit():
-        # Обработка ролей
         roles_text = ""
         if hasattr(form.needed_roles, 'data') and form.needed_roles.data:
             if isinstance(form.needed_roles.data, list):
@@ -335,7 +314,6 @@ def edit_project(project_id):
         flash('Проект успешно обновлен!', 'success')
         return redirect(url_for('project_detail', project_id=project.id))
 
-    # Заполняем форму текущими данными
     if request.method == 'GET':
         form.title.data = project.title
         form.description.data = project.description
@@ -355,19 +333,17 @@ def edit_project(project_id):
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
 
-    # Проверяем, что текущий пользователь - создатель проекта
     if project.creator_id != current_user.id:
         flash('У вас нет прав удалить этот проект', 'danger')
         return redirect(url_for('index'))
 
-    # Удаляем все связанные заявки и сообщения
+    # Удаляем сообщения и заявки
     applications = Application.query.filter_by(project_id=project_id).all()
     for app in applications:
         Message.query.filter_by(application_id=app.id).delete()
 
     Application.query.filter_by(project_id=project_id).delete()
 
-    # Удаляем проект
     db.session.delete(project)
     db.session.commit()
 
@@ -382,12 +358,10 @@ def delete_project(project_id):
 def apply_to_project(project_id):
     project = Project.query.get_or_404(project_id)
 
-    # Нельзя подавать заявку на свой проект
     if project.creator_id == current_user.id:
         flash('Вы не можете подать заявку на свой проект', 'warning')
         return redirect(url_for('project_detail', project_id=project_id))
 
-    # Проверяем, не подал ли уже заявку
     existing = Application.query.filter_by(
         project_id=project_id,
         user_id=current_user.id
@@ -400,7 +374,6 @@ def apply_to_project(project_id):
     role = request.form.get('role', '').strip()
     message = request.form.get('message', '').strip()
 
-    # ВАЖНО: Проверяем, что роль и сообщение заполнены
     if not role:
         flash('Пожалуйста, выберите роль', 'danger')
         return redirect(url_for('project_detail', project_id=project_id))
@@ -413,7 +386,6 @@ def apply_to_project(project_id):
         flash('Сообщение слишком короткое (минимум 10 символов)', 'danger')
         return redirect(url_for('project_detail', project_id=project_id))
 
-    # Парсим роли проекта для проверки
     valid_roles = []
     if project.needed_roles:
         lines = project.needed_roles.strip().split('\n')
@@ -423,17 +395,14 @@ def apply_to_project(project_id):
                 continue
 
             if ':' in line:
-                # Берем только часть до двоеточия (название роли)
                 valid_role = line.split(':')[0].strip()
                 valid_roles.append(valid_role)
             else:
                 valid_roles.append(line.strip())
 
-    # Если роли не распарсились через переносы, пробуем через запятую
     if not valid_roles and project.needed_roles:
         valid_roles = [r.strip() for r in project.needed_roles.split(',') if r.strip()]
 
-    # Проверяем, что выбранная роль есть в списке допустимых
     if valid_roles and role not in valid_roles:
         flash(f'Роль "{role}" не найдена в списке требуемых ролей для этого проекта', 'danger')
         return redirect(url_for('project_detail', project_id=project_id))
@@ -457,15 +426,13 @@ def apply_to_project(project_id):
 def cancel_application(app_id):
     application = Application.query.get_or_404(app_id)
 
-    # Проверяем, что текущий пользователь - автор заявки
     if application.user_id != current_user.id:
         flash('У вас нет прав отменить эту заявку', 'danger')
         return redirect(url_for('profile'))
 
-    # Удаляем все сообщения чата
+    # Удаляем сообщения
     Message.query.filter_by(application_id=app_id).delete()
 
-    # Удаляем заявку
     db.session.delete(application)
     db.session.commit()
 
@@ -478,7 +445,6 @@ def cancel_application(app_id):
 def project_applications(project_id):
     project = Project.query.get_or_404(project_id)
 
-    # Проверяем, что текущий пользователь - создатель проекта
     if project.creator_id != current_user.id:
         flash('У вас нет прав просматривать заявки на этот проект', 'danger')
         return redirect(url_for('project_detail', project_id=project_id))
@@ -496,7 +462,6 @@ def handle_application(app_id, action):
     application = Application.query.get_or_404(app_id)
     project = Project.query.get_or_404(application.project_id)
 
-    # Проверяем, что текущий пользователь - создатель проекта
     if project.creator_id != current_user.id:
         flash('У вас нет прав для этого действия', 'danger')
         return redirect(url_for('project_detail', project_id=project.id))
@@ -526,26 +491,29 @@ def edit_profile():
         current_user.university = form.university.data
         current_user.faculty = form.faculty.data
 
-        # Безопасное преобразование курса
         if form.course.data and form.course.data.isdigit():
             current_user.course = int(form.course.data)
         else:
             current_user.course = 1
 
         current_user.skills = form.skills.data
-        current_user.bio = form.bio.data if hasattr(form, 'bio') else None
+
+        # Используем только если поле есть в форме
+        if hasattr(form, 'bio'):
+            current_user.bio = form.bio.data
 
         db.session.commit()
         flash('Профиль успешно обновлен!', 'success')
         return redirect(url_for('profile'))
 
-    # Заполняем форму текущими данными
     if request.method == 'GET':
         form.full_name.data = current_user.full_name or ''
         form.university.data = current_user.university or ''
         form.faculty.data = current_user.faculty or ''
         form.course.data = str(current_user.course) if current_user.course else '1'
         form.skills.data = current_user.skills or ''
+
+        # Используем только если поле есть
         if hasattr(form, 'bio') and hasattr(current_user, 'bio'):
             form.bio.data = current_user.bio or ''
 
@@ -567,52 +535,62 @@ def chats():
 
     # 1. Чаты где вы соискатель
     for app in user_applications:
-        if app.project:
+        if app and app.project:
             # Получаем последнее сообщение
             last_message = Message.query.filter_by(application_id=app.id) \
                 .order_by(Message.created_at.desc()).first()
 
             # Считаем непрочитанные сообщения
-            unread_count = Message.query.filter_by(
-                application_id=app.id,
-                is_read=False
-            ).filter(Message.sender_id != current_user.id).count()
+            unread_count = 0
+            try:
+                unread_count = Message.query.filter_by(
+                    application_id=app.id,
+                    is_read=False
+                ).filter(Message.sender_id != current_user.id).count()
+            except:
+                pass  # Если поле еще не создано
 
             all_chats.append({
                 'id': app.id,
                 'type': 'applicant',
                 'project': app.project,
                 'application': app,
-                'interlocutor': app.project.creator,
-                'last_message': last_message.content if last_message else "Нет сообщений",
+                'interlocutor': app.project.creator if app.project.creator else current_user,
+                'last_message': last_message.content if last_message else (app.message or "Нет сообщений"),
                 'last_message_time': last_message.created_at if last_message else app.created_at,
                 'unread_count': unread_count
             })
 
     # 2. Чаты где вы создатель проекта
     for project in user_projects:
-        applications = Application.query.filter_by(project_id=project.id).all()
-        for app in applications:
-            # Получаем последнее сообщение
-            last_message = Message.query.filter_by(application_id=app.id) \
-                .order_by(Message.created_at.desc()).first()
+        if project:
+            applications = Application.query.filter_by(project_id=project.id).all()
+            for app in applications:
+                if app:
+                    # Получаем последнее сообщение
+                    last_message = Message.query.filter_by(application_id=app.id) \
+                        .order_by(Message.created_at.desc()).first()
 
-            # Считаем непрочитанные сообщения
-            unread_count = Message.query.filter_by(
-                application_id=app.id,
-                is_read=False
-            ).filter(Message.sender_id != current_user.id).count()
+                    # Считаем непрочитанные сообщения
+                    unread_count = 0
+                    try:
+                        unread_count = Message.query.filter_by(
+                            application_id=app.id,
+                            is_read=False
+                        ).filter(Message.sender_id != current_user.id).count()
+                    except:
+                        pass  # Если поле еще не создано
 
-            all_chats.append({
-                'id': app.id,
-                'type': 'creator',
-                'project': project,
-                'application': app,
-                'interlocutor': app.user,
-                'last_message': last_message.content if last_message else "Нет сообщений",
-                'last_message_time': last_message.created_at if last_message else app.created_at,
-                'unread_count': unread_count
-            })
+                    all_chats.append({
+                        'id': app.id,
+                        'type': 'creator',
+                        'project': project,
+                        'application': app,
+                        'interlocutor': app.user if app.user else current_user,
+                        'last_message': last_message.content if last_message else (app.message or "Нет сообщений"),
+                        'last_message_time': last_message.created_at if last_message else app.created_at,
+                        'unread_count': unread_count
+                    })
 
     # Сортируем по времени последнего сообщения
     all_chats.sort(key=lambda x: x['last_message_time'], reverse=True)
@@ -633,12 +611,15 @@ def chat(application_id):
         flash('У вас нет доступа к этому чату', 'danger')
         return redirect(url_for('chats'))
 
-    # Помечаем сообщения как прочитанные
-    Message.query.filter_by(
-        application_id=application_id,
-        is_read=False
-    ).filter(Message.sender_id != current_user.id).update({'is_read': True})
-    db.session.commit()
+    # Помечаем сообщения как прочитанные (если поле существует)
+    try:
+        Message.query.filter_by(
+            application_id=application_id,
+            is_read=False
+        ).filter(Message.sender_id != current_user.id).update({'is_read': True})
+        db.session.commit()
+    except:
+        pass  # Если поле еще не создано
 
     # Определяем собеседника
     if current_user.id == application.user_id:
@@ -649,15 +630,22 @@ def chat(application_id):
         chat_type = 'creator'
 
     # Получаем историю сообщений
-    messages = Message.query.filter_by(application_id=application_id) \
-        .order_by(Message.created_at.asc()).all()
+    messages = []
+    try:
+        messages = Message.query.filter_by(application_id=application_id) \
+            .order_by(Message.created_at.asc()).all()
+    except:
+        pass  # Если таблица еще не создана
 
     # Преобразуем в словари
     messages_data = []
     for msg in messages:
-        msg_dict = msg.to_dict()
-        msg_dict['is_my_message'] = (msg.sender_id == current_user.id)
-        messages_data.append(msg_dict)
+        try:
+            msg_dict = msg.to_dict()
+            msg_dict['is_my_message'] = (msg.sender_id == current_user.id)
+            messages_data.append(msg_dict)
+        except:
+            pass
 
     return render_template('chat.html',
                            application=application,
@@ -686,27 +674,31 @@ def send_message(application_id):
         return jsonify({'error': 'Сообщение слишком длинное'}), 400
 
     # Создаем сообщение
-    message = Message(
-        application_id=application_id,
-        sender_id=current_user.id,
-        content=content
-    )
+    try:
+        message = Message(
+            application_id=application_id,
+            sender_id=current_user.id,
+            content=content
+        )
 
-    db.session.add(message)
-    db.session.commit()
-
-    # Обновляем статус заявки (если нужно)
-    if application.status == 'pending':
-        application.status = 'in_dialog'
+        db.session.add(message)
         db.session.commit()
 
-    return jsonify({
-        'success': True,
-        'message_id': message.id,
-        'sender_name': current_user.username,
-        'content': content,
-        'created_at': message.created_at.strftime('%H:%M')
-    })
+        # Обновляем статус заявки (если нужно)
+        if application.status == 'pending':
+            application.status = 'in_dialog'
+            db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message_id': message.id,
+            'sender_name': current_user.username,
+            'content': content,
+            'created_at': message.created_at.strftime('%H:%M')
+        })
+    except Exception as e:
+        print(f"Ошибка отправки сообщения: {e}")
+        return jsonify({'error': 'Ошибка базы данных'}), 500
 
 
 @app.route('/chat/<int:application_id>/messages')
@@ -721,23 +713,33 @@ def get_messages(application_id):
     # Получаем сообщения после определенного ID (для AJAX)
     last_id = request.args.get('last_id', 0, type=int)
 
-    messages = Message.query.filter_by(application_id=application_id) \
-        .filter(Message.id > last_id) \
-        .order_by(Message.created_at.asc()).all()
+    messages = []
+    try:
+        messages = Message.query.filter_by(application_id=application_id) \
+            .filter(Message.id > last_id) \
+            .order_by(Message.created_at.asc()).all()
 
-    # Помечаем как прочитанные
-    for msg in messages:
-        if msg.sender_id != current_user.id and not msg.is_read:
-            msg.is_read = True
+        # Помечаем как прочитанные
+        for msg in messages:
+            if msg.sender_id != current_user.id:
+                try:
+                    msg.is_read = True
+                except:
+                    pass
 
-    db.session.commit()
+        db.session.commit()
+    except:
+        pass  # Если таблица еще не создана
 
     # Преобразуем в JSON
     messages_data = []
     for msg in messages:
-        msg_dict = msg.to_dict()
-        msg_dict['is_my_message'] = (msg.sender_id == current_user.id)
-        messages_data.append(msg_dict)
+        try:
+            msg_dict = msg.to_dict()
+            msg_dict['is_my_message'] = (msg.sender_id == current_user.id)
+            messages_data.append(msg_dict)
+        except:
+            pass
 
     return jsonify({'messages': messages_data})
 
@@ -745,31 +747,40 @@ def get_messages(application_id):
 @app.route('/chat/unread_count')
 @login_required
 def unread_messages_count():
-    # Считаем непрочитанные сообщения во всех чатах пользователя
+    try:
+        # Считаем непрочитанные сообщения во всех чатах пользователя
+        total_unread = 0
 
-    # 1. В заявках где вы соискатель
-    user_applications = Application.query.filter_by(user_id=current_user.id).all()
-    total_unread = 0
+        # 1. В заявках где вы соискатель
+        user_applications = Application.query.filter_by(user_id=current_user.id).all()
 
-    for app in user_applications:
-        unread = Message.query.filter_by(
-            application_id=app.id,
-            is_read=False
-        ).filter(Message.sender_id != current_user.id).count()
-        total_unread += unread
+        for app in user_applications:
+            try:
+                unread = Message.query.filter_by(
+                    application_id=app.id,
+                    is_read=False
+                ).filter(Message.sender_id != current_user.id).count()
+                total_unread += unread
+            except:
+                pass
 
-    # 2. В заявках где вы создатель проекта
-    user_projects = Project.query.filter_by(creator_id=current_user.id).all()
-    for project in user_projects:
-        applications = Application.query.filter_by(project_id=project.id).all()
-        for app in applications:
-            unread = Message.query.filter_by(
-                application_id=app.id,
-                is_read=False
-            ).filter(Message.sender_id != current_user.id).count()
-            total_unread += unread
+        # 2. В заявках где вы создатель проекта
+        user_projects = Project.query.filter_by(creator_id=current_user.id).all()
+        for project in user_projects:
+            applications = Application.query.filter_by(project_id=project.id).all()
+            for app in applications:
+                try:
+                    unread = Message.query.filter_by(
+                        application_id=app.id,
+                        is_read=False
+                    ).filter(Message.sender_id != current_user.id).count()
+                    total_unread += unread
+                except:
+                    pass
 
-    return jsonify({'unread_count': total_unread})
+        return jsonify({'unread_count': total_unread})
+    except:
+        return jsonify({'unread_count': 0})
 
 
 # ---------- ПОИСК И ФИЛЬТРАЦИЯ ----------
@@ -828,14 +839,31 @@ def page_not_found(e):
 
 @app.errorhandler(500)
 def internal_server_error(e):
+    print(f"Ошибка 500: {e}")
     return render_template('500.html'), 500
 
-
+# ЭКСТРЕННОЕ ДОБАВЛЕНИЕ СТОЛБЦА (запустится один раз)
+with app.app_context():
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    columns = [col['name'] for col in inspector.get_columns('user')]
+    if 'bio' not in columns:
+        try:
+            # Для PostgreSQL
+            db.session.execute(text('ALTER TABLE "user" ADD COLUMN bio TEXT;'))
+            db.session.commit()
+            print("✅ Столбец 'bio' добавлен в таблицу 'user'")
+        except Exception as e:
+            print(f"⚠️ Не удалось добавить столбец: {e}")
+            db.session.rollback()
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 
 with app.app_context():
-    db.create_all()
-    print("✅ База данных инициализирована")
+    try:
+        db.create_all()
+        print("✅ База данных инициализирована")
+    except Exception as e:
+        print(f"⚠️ Предупреждение при инициализации БД: {e}")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
