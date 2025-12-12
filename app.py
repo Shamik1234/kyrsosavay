@@ -262,16 +262,17 @@ def project_detail(project_id):
 def create_project():
     form = ProjectForm()
     if form.validate_on_submit():
-        # Обработка ролей из SelectMultipleField
-        roles_list = form.needed_roles.data if hasattr(form.needed_roles, 'data') else []
-
-        # Преобразуем список ролей в строку формата "роль:уровень\nроль:уровень"
+        # Обработка ролей
         roles_text = ""
-        if roles_list and isinstance(roles_list, list):
-            for role in roles_list:
-                # Если роль из предопределенного списка
-                roles_text += f"{role}:средний\n"
-        elif form.needed_roles.data:  # Если это текст из TextArea
+        if hasattr(form.needed_roles, 'data') and form.needed_roles.data:
+            if isinstance(form.needed_roles.data, list):
+                # Если это список из SelectMultipleField
+                for role in form.needed_roles.data:
+                    roles_text += f"{role}:средний\n"
+            else:
+                # Если это текст из TextAreaField
+                roles_text = form.needed_roles.data
+        elif form.needed_roles.data:  # Для обратной совместимости
             roles_text = form.needed_roles.data
 
         project = Project(
@@ -310,11 +311,13 @@ def edit_project(project_id):
 
     if form.validate_on_submit():
         # Обработка ролей
-        roles_list = form.needed_roles.data if hasattr(form.needed_roles, 'data') else []
         roles_text = ""
-        if roles_list and isinstance(roles_list, list):
-            for role in roles_list:
-                roles_text += f"{role}:средний\n"
+        if hasattr(form.needed_roles, 'data') and form.needed_roles.data:
+            if isinstance(form.needed_roles.data, list):
+                for role in form.needed_roles.data:
+                    roles_text += f"{role}:средний\n"
+            else:
+                roles_text = form.needed_roles.data
         elif form.needed_roles.data:
             roles_text = form.needed_roles.data
 
@@ -357,7 +360,11 @@ def delete_project(project_id):
         flash('У вас нет прав удалить этот проект', 'danger')
         return redirect(url_for('index'))
 
-    # Удаляем все связанные заявки
+    # Удаляем все связанные заявки и сообщения
+    applications = Application.query.filter_by(project_id=project_id).all()
+    for app in applications:
+        Message.query.filter_by(application_id=app.id).delete()
+
     Application.query.filter_by(project_id=project_id).delete()
 
     # Удаляем проект
@@ -455,6 +462,10 @@ def cancel_application(app_id):
         flash('У вас нет прав отменить эту заявку', 'danger')
         return redirect(url_for('profile'))
 
+    # Удаляем все сообщения чата
+    Message.query.filter_by(application_id=app_id).delete()
+
+    # Удаляем заявку
     db.session.delete(application)
     db.session.commit()
 
@@ -541,115 +552,7 @@ def edit_profile():
     return render_template('edit_profile.html', form=form)
 
 
-# ---------- ПОИСК И ФИЛЬТРАЦИЯ ----------
-
-@app.route('/search')
-def search_projects():
-    query = request.args.get('q', '')
-    category = request.args.get('category', '')
-    university = request.args.get('university', '')
-    difficulty = request.args.get('difficulty', '')
-
-    # Базовый запрос
-    projects_query = Project.query.filter_by(status='active')
-
-    # Применяем фильтры
-    if query:
-        projects_query = projects_query.filter(
-            (Project.title.ilike(f'%{query}%')) |
-            (Project.description.ilike(f'%{query}%'))
-        )
-
-    if category and category != 'all':
-        projects_query = projects_query.filter_by(category=category)
-
-    if university and university != 'all':
-        projects_query = projects_query.filter_by(university_filter=university)
-
-    if difficulty and difficulty != 'all':
-        projects_query = projects_query.filter_by(difficulty=difficulty)
-
-    projects = projects_query.order_by(Project.created_at.desc()).all()
-
-    # Получаем уникальные значения для фильтров
-    categories = db.session.query(Project.category).distinct().all()
-    universities = db.session.query(Project.university_filter).distinct().all()
-    difficulties = ['beginner', 'intermediate', 'advanced']
-
-    return render_template('search.html',
-                           projects=projects,
-                           search_query=query,
-                           categories=[c[0] for c in categories if c[0]],
-                           universities=[u[0] for u in universities if u[0]],
-                           difficulties=difficulties,
-                           selected_category=category,
-                           selected_university=university,
-                           selected_difficulty=difficulty,
-                           current_user=current_user)
-
-
-# ---------- ЧАТЫ (базовая версия) ----------
-
-@app.route('/chats')
-@login_required
-def chats():
-    # Получаем все заявки пользователя, где есть общение
-    user_applications = Application.query.filter_by(user_id=current_user.id).all()
-
-    # Получаем все проекты пользователя, где есть заявки
-    user_projects = Project.query.filter_by(creator_id=current_user.id).all()
-
-    # Собираем все чаты (заявки)
-    all_chats = []
-
-    # Чат как соискатель
-    for app in user_applications:
-        if app.project:
-            all_chats.append({
-                'id': app.id,
-                'type': 'applicant',
-                'project': app.project,
-                'application': app,
-                'last_message_time': app.created_at,
-                'unread': False
-            })
-
-    # Чат как создатель проекта
-    for project in user_projects:
-        applications = Application.query.filter_by(project_id=project.id).all()
-        for app in applications:
-            all_chats.append({
-                'id': app.id,
-                'type': 'creator',
-                'project': project,
-                'application': app,
-                'user': app.user,
-                'last_message_time': app.created_at,
-                'unread': False
-            })
-
-    # Сортируем по времени
-    all_chats.sort(key=lambda x: x['last_message_time'], reverse=True)
-
-    return render_template('chats.html',
-                           chats=all_chats,
-                           current_user=current_user)
-
-
-
-# ---------- ОБРАБОТЧИКИ ОШИБОК ----------
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    return render_template('500.html'), 500
-
-
-# ---------- ДИАЛОГИ / ЧАТЫ ----------
+# ---------- ЧАТЫ ----------
 
 @app.route('/chats')
 @login_required
@@ -868,11 +771,71 @@ def unread_messages_count():
 
     return jsonify({'unread_count': total_unread})
 
+
+# ---------- ПОИСК И ФИЛЬТРАЦИЯ ----------
+
+@app.route('/search')
+def search_projects():
+    query = request.args.get('q', '')
+    category = request.args.get('category', '')
+    university = request.args.get('university', '')
+    difficulty = request.args.get('difficulty', '')
+
+    # Базовый запрос
+    projects_query = Project.query.filter_by(status='active')
+
+    # Применяем фильтры
+    if query:
+        projects_query = projects_query.filter(
+            (Project.title.ilike(f'%{query}%')) |
+            (Project.description.ilike(f'%{query}%'))
+        )
+
+    if category and category != 'all':
+        projects_query = projects_query.filter_by(category=category)
+
+    if university and university != 'all':
+        projects_query = projects_query.filter_by(university_filter=university)
+
+    if difficulty and difficulty != 'all':
+        projects_query = projects_query.filter_by(difficulty=difficulty)
+
+    projects = projects_query.order_by(Project.created_at.desc()).all()
+
+    # Получаем уникальные значения для фильтров
+    categories = db.session.query(Project.category).distinct().all()
+    universities = db.session.query(Project.university_filter).distinct().all()
+    difficulties = ['beginner', 'intermediate', 'advanced']
+
+    return render_template('search.html',
+                           projects=projects,
+                           search_query=query,
+                           categories=[c[0] for c in categories if c[0]],
+                           universities=[u[0] for u in universities if u[0]],
+                           difficulties=difficulties,
+                           selected_category=category,
+                           selected_university=university,
+                           selected_difficulty=difficulty,
+                           current_user=current_user)
+
+
+# ---------- ОБРАБОТЧИКИ ОШИБОК ----------
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
+
+
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 
 with app.app_context():
     db.create_all()
-    print("База данных инициализирована")
+    print("✅ База данных инициализирована")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
