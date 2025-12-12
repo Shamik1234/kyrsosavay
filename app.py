@@ -842,20 +842,43 @@ def internal_server_error(e):
     print(f"Ошибка 500: {e}")
     return render_template('500.html'), 500
 
-# ЭКСТРЕННОЕ ДОБАВЛЕНИЕ СТОЛБЦА (запустится один раз)
+
+
 with app.app_context():
+    try:
+        db.create_all()
+        print("✅ База данных инициализирована")
+    except Exception as e:
+        print(f"⚠️ Предупреждение при инициализации БД: {e}")
+
+    # Добавляем недостающие столбцы
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
-    columns = [col['name'] for col in inspector.get_columns('user')]
-    if 'bio' not in columns:
-        try:
-            # Для PostgreSQL
-            db.session.execute(text('ALTER TABLE "user" ADD COLUMN bio TEXT;'))
-            db.session.commit()
-            print("✅ Столбец 'bio' добавлен в таблицу 'user'")
-        except Exception as e:
-            print(f"⚠️ Не удалось добавить столбец: {e}")
-            db.session.rollback()
+
+    # 1. Проверяем таблицу user на наличие столбца bio
+    if 'user' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('user')]
+        if 'bio' not in columns:
+            try:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN bio TEXT;'))
+                db.session.commit()
+                print("✅ Столбец 'bio' добавлен в таблицу 'user'")
+            except Exception as e:
+                print(f"⚠️ Не удалось добавить столбец bio: {e}")
+                db.session.rollback()
+
+    # 2. Проверяем таблицу message на наличие столбца is_read
+    if 'message' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('message')]
+        if 'is_read' not in columns:
+            try:
+                # Добавляем столбец 'is_read' с типом BOOLEAN и значением по умолчанию FALSE
+                db.session.execute(text('ALTER TABLE message ADD COLUMN is_read BOOLEAN DEFAULT FALSE;'))
+                db.session.commit()
+                print("✅ Столбец 'is_read' добавлен в таблицу 'message'")
+            except Exception as e:
+                print(f"⚠️ Не удалось добавить столбец is_read: {e}")
+                db.session.rollback()
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 
 with app.app_context():
