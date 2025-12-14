@@ -468,10 +468,10 @@ def handle_application(app_id, action):
 
     if action == 'accept':
         application.status = 'accepted'
-        flash(f'Заявка от {application.user.username} принята!', 'success')
+        flash(f'Заявка от {application.applicant.username} принята!', 'success')
     elif action == 'reject':
         application.status = 'rejected'
-        flash(f'Заявка от {application.user.username} отклонена', 'info')
+        flash(f'Заявка от {application.applicant.username} отклонена', 'info')
     else:
         flash('Неизвестное действие', 'danger')
 
@@ -586,7 +586,7 @@ def chats():
                         'type': 'creator',
                         'project': project,
                         'application': app,
-                        'interlocutor': app.user if app.user else current_user,
+                        'interlocutor': app.applicant if app.applicant else current_user,
                         'last_message': last_message.content if last_message else (app.message or "Нет сообщений"),
                         'last_message_time': last_message.created_at if last_message else app.created_at,
                         'unread_count': unread_count
@@ -626,7 +626,7 @@ def chat(application_id):
         interlocutor = project.creator  # Вы - соискатель
         chat_type = 'applicant'
     else:
-        interlocutor = application.user  # Вы - создатель проекта
+        interlocutor = application.applicant  # Вы - создатель проекта
         chat_type = 'creator'
 
     # Получаем историю сообщений
@@ -844,41 +844,6 @@ def internal_server_error(e):
 
 
 
-with app.app_context():
-    try:
-        db.create_all()
-        print("✅ База данных инициализирована")
-    except Exception as e:
-        print(f"⚠️ Предупреждение при инициализации БД: {e}")
-
-    # Добавляем недостающие столбцы
-    from sqlalchemy import inspect, text
-    inspector = inspect(db.engine)
-
-    # 1. Проверяем таблицу user на наличие столбца bio
-    if 'user' in inspector.get_table_names():
-        columns = [col['name'] for col in inspector.get_columns('user')]
-        if 'bio' not in columns:
-            try:
-                db.session.execute(text('ALTER TABLE "user" ADD COLUMN bio TEXT;'))
-                db.session.commit()
-                print("✅ Столбец 'bio' добавлен в таблицу 'user'")
-            except Exception as e:
-                print(f"⚠️ Не удалось добавить столбец bio: {e}")
-                db.session.rollback()
-
-    # 2. Проверяем таблицу message на наличие столбца is_read
-    if 'message' in inspector.get_table_names():
-        columns = [col['name'] for col in inspector.get_columns('message')]
-        if 'is_read' not in columns:
-            try:
-                # Добавляем столбец 'is_read' с типом BOOLEAN и значением по умолчанию FALSE
-                db.session.execute(text('ALTER TABLE message ADD COLUMN is_read BOOLEAN DEFAULT FALSE;'))
-                db.session.commit()
-                print("✅ Столбец 'is_read' добавлен в таблицу 'message'")
-            except Exception as e:
-                print(f"⚠️ Не удалось добавить столбец is_read: {e}")
-                db.session.rollback()
 # ========== ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ==========
 
 with app.app_context():
